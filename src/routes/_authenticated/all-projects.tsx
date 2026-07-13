@@ -105,6 +105,14 @@ function AllProjectsPage() {
     toast.success(`Copied ${items.length} update(s) for ${site}`);
   };
 
+  const toggleFeatured = async (r: ProjectRow & { currentStatus: Status }) => {
+    const next = !r.featured;
+    const { error } = await supabase.from("projects").update({ featured: next }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "Featured in Executive Summary" : "Removed from Executive Summary");
+    load();
+  };
+
   if (authLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return null;
 
@@ -170,9 +178,21 @@ function AllProjectsPage() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-3 py-2">
-                    <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
-                      {r.name}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleFeatured(r)}
+                        title={r.featured ? "Un-feature from Executive Summary" : "Feature in Executive Summary"}
+                        className={cn(
+                          "shrink-0 rounded p-0.5 hover:bg-muted",
+                          r.featured ? "text-primary" : "text-muted-foreground/50",
+                        )}
+                      >
+                        <Star className={cn("w-4 h-4", r.featured && "fill-current")} />
+                      </button>
+                      <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
+                        {r.name}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
