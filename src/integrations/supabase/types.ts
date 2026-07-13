@@ -37,6 +37,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          archived: boolean
           blocker: string | null
           created_at: string
           description: string | null
@@ -48,6 +49,7 @@ export type Database = {
           status: Database["public"]["Enums"]["project_status"]
         }
         Insert: {
+          archived?: boolean
           blocker?: string | null
           created_at?: string
           description?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["project_status"]
         }
         Update: {
+          archived?: boolean
           blocker?: string | null
           created_at?: string
           description?: string | null

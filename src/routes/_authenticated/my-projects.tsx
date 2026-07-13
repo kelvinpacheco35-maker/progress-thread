@@ -222,39 +222,41 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
   const [status, setStatus] = useState<Status>("On Track");
   const [note, setNote] = useState("");
   const [blocker, setBlocker] = useState("");
+  const [weekLabel, setWeekLabel] = useState<string>(currentWeekLabel());
   const [saving, setSaving] = useState(false);
 
   const sorted = useMemo(() => [...projects].sort((a, b) => statusRank(a.status) - statusRank(b.status)), [projects]);
 
   const submit = async () => {
-    if (!user || !projectId || !note.trim()) return;
+    if (!user || !projectId || !note.trim() || !weekLabel) return;
     setSaving(true);
-    const week_label = currentWeekLabel();
     const { error: uErr } = await supabase.from("weekly_updates").insert({
       project_id: projectId,
       author_id: user.id,
-      week_label,
+      week_label: weekLabel,
       status,
       note: note.trim(),
       blocker: blocker.trim() || null,
     });
     if (uErr) { setSaving(false); return toast.error(uErr.message); }
-    // Also sync the project's current status so it stays consistent.
-    await supabase.from("projects").update({ status, blocker: blocker.trim() || null }).eq("id", projectId);
+    // Only sync the project's current status if logging for the current week
+    if (weekLabel === currentWeekLabel()) {
+      await supabase.from("projects").update({ status, blocker: blocker.trim() || null }).eq("id", projectId);
+    }
     setSaving(false);
     toast.success("Update logged");
     setOpen(false);
-    setNote(""); setBlocker(""); setStatus("On Track"); setProjectId("");
+    setNote(""); setBlocker(""); setStatus("On Track"); setProjectId(""); setWeekLabel(currentWeekLabel());
     onCreated();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" disabled={projects.length === 0}>Log this week's update</Button>
+        <Button variant="secondary" disabled={projects.length === 0}>Log update</Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Log update — Week {currentWeekLabel()}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Log weekly update</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Project</Label>
@@ -265,19 +267,33 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label>Status this week</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Week</Label>
+              <Input
+                type="week"
+                value={weekLabel}
+                onChange={(e) => setWeekLabel(e.target.value)}
+                max={currentWeekLabel()}
+              />
+              <p className="text-xs text-muted-foreground">Defaults to this week. Pick an earlier week to backfill.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1.5"><Label>What happened this week?</Label><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} /></div>
           <div className="space-y-1.5"><Label>Blocker (optional)</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving || !projectId || !note.trim()}>{saving ? "Saving…" : "Log update"}</Button>
+          <Button onClick={submit} disabled={saving || !projectId || !note.trim() || !weekLabel}>
+            {saving ? "Saving…" : "Log update"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
