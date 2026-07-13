@@ -311,7 +311,12 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
       blocker: blocker.trim() || null,
     });
     if (uErr) { setSaving(false); return toast.error(uErr.message); }
-    const projectPatch: Record<string, unknown> = {
+    const projectPatch: {
+      completion_pct: number;
+      next_action: string | null;
+      status?: Status;
+      blocker?: string | null;
+    } = {
       completion_pct: completionPct,
       next_action: nextAction.trim() || null,
     };
