@@ -34,9 +34,10 @@ function AllProjectsPage() {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("active");
   const [search, setSearch] = useState("");
-  const [sortByRisk, setSortByRisk] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>("risk");
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
