@@ -371,6 +371,14 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
             </div>
           </div>
           <div className="space-y-1.5"><Label>What happened this week?</Label><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} /></div>
+          <div className="space-y-1.5">
+            <Label>Progress ({completionPct}%)</Label>
+            <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} disabled={!projectId} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Next action</Label>
+            <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" disabled={!projectId} />
+          </div>
           <div className="space-y-1.5"><Label>Blocker (optional)</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
         </div>
         <DialogFooter>
