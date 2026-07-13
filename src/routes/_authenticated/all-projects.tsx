@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/all-projects")({
 });
 
 type ViewMode = "active" | "completed" | "archived" | "all";
+type SortMode = "risk" | "updated" | "priority" | "due";
 
 function AllProjectsPage() {
   const { isAdmin, loading: authLoading } = useAuth();
