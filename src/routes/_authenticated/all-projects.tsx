@@ -229,9 +229,28 @@ function AllProjectsPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setSortByRisk((v) => !v)}>
-          <ArrowUpDown className="w-4 h-4 mr-1" /> {sortByRisk ? "Risk first" : "Last updated"}
-        </Button>
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Category</div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Sort</div>
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="w-40"><ArrowUpDown className="w-3.5 h-3.5 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="risk">Risk first</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
+              <SelectItem value="due">Due date</SelectItem>
+              <SelectItem value="updated">Last updated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
