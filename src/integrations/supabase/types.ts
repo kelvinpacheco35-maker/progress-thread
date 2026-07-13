@@ -40,6 +40,7 @@ export type Database = {
           archived: boolean
           blocker: string | null
           category: Database["public"]["Enums"]["project_category"] | null
+          completion_pct: number
           created_at: string
           description: string | null
           due_date: string | null
@@ -49,13 +50,16 @@ export type Database = {
           next_action: string | null
           owner_id: string
           priority: Database["public"]["Enums"]["project_priority"]
+          problem_statement: string | null
           site: Database["public"]["Enums"]["site_code"]
+          start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
         }
         Insert: {
           archived?: boolean
           blocker?: string | null
           category?: Database["public"]["Enums"]["project_category"] | null
+          completion_pct?: number
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -65,13 +69,16 @@ export type Database = {
           next_action?: string | null
           owner_id: string
           priority?: Database["public"]["Enums"]["project_priority"]
+          problem_statement?: string | null
           site: Database["public"]["Enums"]["site_code"]
+          start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
         }
         Update: {
           archived?: boolean
           blocker?: string | null
           category?: Database["public"]["Enums"]["project_category"] | null
+          completion_pct?: number
           created_at?: string
           description?: string | null
           due_date?: string | null
@@ -81,7 +88,9 @@ export type Database = {
           next_action?: string | null
           owner_id?: string
           priority?: Database["public"]["Enums"]["project_priority"]
+          problem_statement?: string | null
           site?: Database["public"]["Enums"]["site_code"]
+          start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
         }
         Relationships: []
