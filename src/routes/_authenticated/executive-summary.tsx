@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SITES, formatDate, isOverdue, type Status, type Category } from "@/lib/ci";
+import { SITES, formatDate, isOverdue, statusRank, priorityClasses, type Status, type Category, type Priority } from "@/lib/ci";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
@@ -21,9 +21,20 @@ type P = {
   featured: boolean;
   due_date: string | null;
   category: Category | null;
+  priority: Priority | null;
   next_action: string | null;
 };
 type U = { project_id: string; status: Status; note: string; created_at: string };
+
+function statusAccent(s: Status): string {
+  switch (s) {
+    case "On Track": return "border-l-[var(--status-ontrack)]";
+    case "At Risk": return "border-l-[var(--status-atrisk)]";
+    case "Blocked": return "border-l-[var(--status-blocked)]";
+    case "Complete": return "border-l-[var(--status-complete)]";
+    case "On Hold": return "border-l-[var(--status-hold)]";
+  }
+}
 
 function ExecutiveSummaryPage() {
   const [projects, setProjects] = useState<P[]>([]);
@@ -35,7 +46,7 @@ function ExecutiveSummaryPage() {
       const [{ data: p }, { data: u }] = await Promise.all([
         supabase
           .from("projects")
-          .select("id, name, site, status, featured, due_date, category, next_action")
+          .select("id, name, site, status, featured, due_date, category, priority, next_action")
           .eq("featured", true),
         supabase
           .from("weekly_updates")
@@ -64,13 +75,22 @@ function ExecutiveSummaryPage() {
           const summary = (l?.note ?? "").split("\n").slice(0, 2).join(" ").trim();
           const currentStatus = (l?.status ?? p.status) as Status;
           return { ...p, currentStatus, summary, overdue: isOverdue(p.due_date, currentStatus) };
-        }),
-    })).filter((g) => g.rows.length > 0);
+        })
+        .sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus)),
+    }));
   }, [projects, latest]);
 
+  const totals = useMemo(() => {
+    const all = bySite.flatMap((g) => g.rows);
+    const counts: Record<Status, number> = { "On Track": 0, "At Risk": 0, "Blocked": 0, "Complete": 0, "On Hold": 0 };
+    for (const r of all) counts[r.currentStatus] += 1;
+    return { total: all.length, counts };
+  }, [bySite]);
+
   const copyAll = async () => {
-    if (bySite.length === 0) return toast.info("Nothing featured yet");
-    const text = bySite
+    const groups = bySite.filter((g) => g.rows.length > 0);
+    if (groups.length === 0) return toast.info("Nothing featured yet");
+    const text = groups
       .map(
         (g) =>
           `${g.site}\n` +
@@ -102,31 +122,49 @@ function ExecutiveSummaryPage() {
         </Button>
       </div>
 
-      {bySite.length === 0 ? (
-        <div className="rounded-md border border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-          No projects have been featured yet. An admin can feature projects from the All Projects tab.
+      {/* Stat strip */}
+      <div className="rounded-md border border-border bg-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-2xl font-semibold">{totals.total}</span>
+          <span className="text-xs text-muted-foreground uppercase tracking-wide">Featured</span>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {bySite.map((g) => (
-            <section key={g.site}>
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                {g.site}
-              </h2>
-              <div className="rounded-md border border-border bg-card divide-y divide-border">
+        <StatCount label="On Track" count={totals.counts["On Track"]} colorVar="--status-ontrack" />
+        <StatCount label="At Risk" count={totals.counts["At Risk"]} colorVar="--status-atrisk" />
+        <StatCount label="Blocked" count={totals.counts["Blocked"]} colorVar="--status-blocked" />
+      </div>
+
+      <div className="space-y-6">
+        {bySite.map((g) => (
+          <section key={g.site}>
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              {g.site}
+            </h2>
+            {g.rows.length === 0 ? (
+              <div className="rounded-md border border-border bg-card px-4 py-4 text-sm text-muted-foreground italic">
+                No projects featured yet
+              </div>
+            ) : (
+              <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
                 {g.rows.map((r) => (
-                  <div key={r.id} className="px-4 py-3 flex items-start gap-3">
+                  <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
                     <StatusBadge status={r.currentStatus} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center flex-wrap gap-2">
                         <span className="font-medium">{r.name}</span>
-                        {r.category && (
+                        {r.category ? (
                           <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
+                        ) : (
+                          <span className="text-xs rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground italic">No category</span>
                         )}
-                        {r.due_date && (
+                        {r.priority && (
+                          <span className={cn("text-xs rounded-full px-2 py-0.5 border", priorityClasses(r.priority))}>{r.priority}</span>
+                        )}
+                        {r.due_date ? (
                           <span className={cn("text-xs", r.overdue ? "text-[var(--status-blocked)] font-medium" : "text-muted-foreground")}>
                             Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
                           </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">No due date</span>
                         )}
                       </div>
                       {r.next_action && (
@@ -139,11 +177,20 @@ function ExecutiveSummaryPage() {
                   </div>
                 ))}
               </div>
-            </section>
-          ))}
-        </div>
-      )}
+            )}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
 
+function StatCount({ label, count, colorVar }: { label: string; count: number; colorVar: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ backgroundColor: `var(${colorVar})` }} />
+      <span className="text-sm font-medium" style={{ color: `var(${colorVar})` }}>{count}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+  );
+}
