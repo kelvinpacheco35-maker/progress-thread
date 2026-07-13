@@ -113,14 +113,23 @@ function AllProjectsPage() {
 
     if (siteFilter !== "all") out = out.filter((r) => r.site === siteFilter);
     if (statusFilter !== "all") out = out.filter((r) => r.currentStatus === statusFilter);
+    if (categoryFilter !== "all") out = out.filter((r) => r.category === categoryFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       out = out.filter((r) => r.name.toLowerCase().includes(q) || (r.owner_name ?? "").toLowerCase().includes(q));
     }
-    if (sortByRisk) out.sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus) || (new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()));
-    else out.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+    const byUpdated = (a: typeof out[number], b: typeof out[number]) =>
+      new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+    if (sortMode === "risk") out.sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus) || byUpdated(a, b));
+    else if (sortMode === "priority") out.sort((a, b) => priorityRank((a.priority ?? "Medium") as Priority) - priorityRank((b.priority ?? "Medium") as Priority) || byUpdated(a, b));
+    else if (sortMode === "due") out.sort((a, b) => {
+      const av = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+      const bv = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+      return av - bv;
+    });
+    else out.sort(byUpdated);
     return out;
-  }, [projects, latestByProject, profiles, siteFilter, statusFilter, viewMode, search, sortByRisk]);
+  }, [projects, latestByProject, profiles, siteFilter, statusFilter, categoryFilter, viewMode, search, sortMode]);
 
   const siteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
