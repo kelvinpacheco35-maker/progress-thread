@@ -129,6 +129,7 @@ function AppShell({ children }: { children: ReactNode }) {
                 <NavLink to="/my-projects">My Projects</NavLink>
                 {isAdmin && <NavLink to="/all-projects">All Projects</NavLink>}
                 <NavLink to="/summary">Summary</NavLink>
+                <NavLink to="/executive-summary">Executive Summary</NavLink>
               </nav>
             </div>
             <div className="flex items-center gap-4 text-sm">

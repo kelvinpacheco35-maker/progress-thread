@@ -25,6 +25,7 @@ export type ProjectRow = {
   description: string | null;
   blocker: string | null;
   created_at: string;
+  featured?: boolean;
 };
 
 export function ProjectHistoryDialog({

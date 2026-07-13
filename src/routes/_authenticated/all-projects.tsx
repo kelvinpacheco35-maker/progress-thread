@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Copy, Check, ArrowUpDown } from "lucide-react";
+import { Copy, Check, ArrowUpDown, Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/all-projects")({
   head: () => ({ meta: [{ title: "All Projects — CI Status Tracker" }] }),
@@ -36,7 +37,7 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, created_at").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, created_at").order("created_at", { ascending: false }),
       supabase.from("weekly_updates").select("id, project_id, week_label, status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);
@@ -104,6 +105,14 @@ function AllProjectsPage() {
     toast.success(`Copied ${items.length} update(s) for ${site}`);
   };
 
+  const toggleFeatured = async (r: ProjectRow & { currentStatus: Status }) => {
+    const next = !r.featured;
+    const { error } = await supabase.from("projects").update({ featured: next }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success(next ? "Featured in Executive Summary" : "Removed from Executive Summary");
+    load();
+  };
+
   if (authLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return null;
 
@@ -169,9 +178,21 @@ function AllProjectsPage() {
               {rows.map((r) => (
                 <tr key={r.id} className="border-t border-border hover:bg-muted/30">
                   <td className="px-3 py-2">
-                    <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
-                      {r.name}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => toggleFeatured(r)}
+                        title={r.featured ? "Un-feature from Executive Summary" : "Feature in Executive Summary"}
+                        className={cn(
+                          "shrink-0 rounded p-0.5 hover:bg-muted",
+                          r.featured ? "text-primary" : "text-muted-foreground/50",
+                        )}
+                      >
+                        <Star className={cn("w-4 h-4", r.featured && "fill-current")} />
+                      </button>
+                      <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
+                        {r.name}
+                      </button>
+                    </div>
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
