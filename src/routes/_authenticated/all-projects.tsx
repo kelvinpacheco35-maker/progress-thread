@@ -455,6 +455,10 @@ function EditProjectDialog({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("On Track");
   const [blocker, setBlocker] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<Priority>("Medium");
+  const [nextAction, setNextAction] = useState("");
+  const [category, setCategory] = useState<Category | "">("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -463,17 +467,27 @@ function EditProjectDialog({
       setDescription(project.description ?? "");
       setStatus(project.status);
       setBlocker(project.blocker ?? "");
+      setDueDate(project.due_date ?? "");
+      setPriority((project.priority as Priority) ?? "Medium");
+      setNextAction(project.next_action ?? "");
+      setCategory((project.category as Category) ?? "");
     }
   }, [project]);
 
   const save = async () => {
     if (!project) return;
+    if (!dueDate) return toast.error("Due date is required");
+    if (!category) return toast.error("Category is required");
     setSaving(true);
     const { error } = await supabase.from("projects").update({
       name: name.trim(),
       description: description.trim() || null,
       status,
       blocker: blocker.trim() || null,
+      due_date: dueDate,
+      priority,
+      next_action: nextAction.trim() || null,
+      category,
     }).eq("id", project.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -484,19 +498,45 @@ function EditProjectDialog({
 
   return (
     <Dialog open={!!project} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit project</DialogTitle>
           <DialogDescription>{project?.site} · Owner {project?.owner_name ?? "—"}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Category *</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                <SelectTrigger><SelectValue placeholder="Choose one" /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Due date *</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
           <div className="space-y-1.5">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-            </Select>
+            <Label>Next action</Label>
+            <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next" />
           </div>
           <div className="space-y-1.5"><Label>Description</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Blocker</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
