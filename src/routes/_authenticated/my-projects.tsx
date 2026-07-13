@@ -284,9 +284,20 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
   const [note, setNote] = useState("");
   const [blocker, setBlocker] = useState("");
   const [weekLabel, setWeekLabel] = useState<string>(currentWeekLabel());
+  const [completionPct, setCompletionPct] = useState<number>(0);
+  const [nextAction, setNextAction] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const sorted = useMemo(() => [...projects].sort((a, b) => statusRank(a.status) - statusRank(b.status)), [projects]);
+
+  // Prefill progress & next action from the selected project
+  useEffect(() => {
+    const p = projects.find((x) => x.id === projectId);
+    if (p) {
+      setCompletionPct(typeof p.completion_pct === "number" ? p.completion_pct : 0);
+      setNextAction(p.next_action ?? "");
+    }
+  }, [projectId, projects]);
 
   const submit = async () => {
     if (!user || !projectId || !note.trim() || !weekLabel) return;
@@ -300,14 +311,26 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
       blocker: blocker.trim() || null,
     });
     if (uErr) { setSaving(false); return toast.error(uErr.message); }
+    const projectPatch: {
+      completion_pct: number;
+      next_action: string | null;
+      status?: Status;
+      blocker?: string | null;
+    } = {
+      completion_pct: completionPct,
+      next_action: nextAction.trim() || null,
+    };
     // Only sync the project's current status if logging for the current week
     if (weekLabel === currentWeekLabel()) {
-      await supabase.from("projects").update({ status, blocker: blocker.trim() || null }).eq("id", projectId);
+      projectPatch.status = status;
+      projectPatch.blocker = blocker.trim() || null;
     }
+    await supabase.from("projects").update(projectPatch).eq("id", projectId);
     setSaving(false);
     toast.success("Update logged");
     setOpen(false);
     setNote(""); setBlocker(""); setStatus("On Track"); setProjectId(""); setWeekLabel(currentWeekLabel());
+    setCompletionPct(0); setNextAction("");
     onCreated();
   };
 
@@ -348,6 +371,14 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
             </div>
           </div>
           <div className="space-y-1.5"><Label>What happened this week?</Label><Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={4} /></div>
+          <div className="space-y-1.5">
+            <Label>Progress ({completionPct}%)</Label>
+            <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} disabled={!projectId} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Next action</Label>
+            <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" disabled={!projectId} />
+          </div>
           <div className="space-y-1.5"><Label>Blocker (optional)</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
         </div>
         <DialogFooter>
