@@ -35,7 +35,7 @@ function MyProjectsPage() {
     setLoading(true);
     const { data: p } = await supabase
       .from("projects")
-      .select("id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category")
+      .select("id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
     const proj = (p ?? []) as ProjectRow[];
@@ -161,17 +161,22 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
   const [priority, setPriority] = useState<Priority>("Medium");
   const [nextAction, setNextAction] = useState("");
   const [category, setCategory] = useState<Category | "">("");
+  const [problemStatement, setProblemStatement] = useState("");
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [completionPct, setCompletionPct] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
     setName(""); setDescription(""); setBlocker(""); setStatus("On Track");
     setDueDate(""); setPriority("Medium"); setNextAction(""); setCategory("");
+    setProblemStatement(""); setStartDate(new Date().toISOString().slice(0, 10)); setCompletionPct(0);
   };
 
   const submit = async () => {
     if (!user || !name.trim()) return;
     if (!dueDate) return toast.error("Due date is required");
     if (!category) return toast.error("Category is required");
+    if (!startDate) return toast.error("Start date is required");
     setSaving(true);
     const { error } = await supabase.from("projects").insert({
       name: name.trim(),
@@ -184,6 +189,9 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
       priority,
       next_action: nextAction.trim() || null,
       category,
+      problem_statement: problemStatement.trim() || null,
+      start_date: startDate,
+      completion_pct: Math.max(0, Math.min(100, Number(completionPct) || 0)),
     });
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -238,6 +246,20 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Start date *</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Completion % ({completionPct}%)</Label>
+              <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Problem statement</Label>
+            <Textarea value={problemStatement} onChange={(e) => setProblemStatement(e.target.value)} rows={2} placeholder="Why this project exists — the pain it's solving and the baseline today" />
+          </div>
           <div className="space-y-1.5">
             <Label>Next action</Label>
             <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" />
@@ -247,7 +269,7 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving || !name.trim() || !dueDate || !category}>{saving ? "Saving…" : "Create project"}</Button>
+          <Button onClick={submit} disabled={saving || !name.trim() || !dueDate || !category || !startDate}>{saving ? "Saving…" : "Create project"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
