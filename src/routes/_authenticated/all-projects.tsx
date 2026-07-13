@@ -282,19 +282,23 @@ function AllProjectsPage() {
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Project</th>
                 <th className="text-left px-3 py-2 font-medium">Site</th>
+                <th className="text-left px-3 py-2 font-medium">Category</th>
                 <th className="text-left px-3 py-2 font-medium">Owner</th>
                 <th className="text-left px-3 py-2 font-medium">Status</th>
-                <th className="text-left px-3 py-2 font-medium">Latest update</th>
+                <th className="text-left px-3 py-2 font-medium">Priority</th>
+                <th className="text-left px-3 py-2 font-medium">Due</th>
+                <th className="text-left px-3 py-2 font-medium">Next action</th>
                 <th className="text-left px-3 py-2 font-medium">Updated</th>
-                <th className="text-left px-3 py-2 font-medium">Weeks</th>
                 <th className="text-right px-3 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r) => {
+                const overdue = isOverdue(r.due_date, r.currentStatus);
+                return (
                 <tr key={r.id} className={cn("border-t border-border hover:bg-muted/30", r.archived && "opacity-60")}>
                   <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
                         {r.name}
                       </button>
@@ -317,13 +321,32 @@ function AllProjectsPage() {
                     )}
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
+                  <td className="px-3 py-2">
+                    {r.category ? (
+                      <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
                   <td className="px-3 py-2"><StatusBadge status={r.currentStatus} /></td>
-                  <td className="px-3 py-2 max-w-[280px] truncate" title={r.latestNote ?? ""}>
-                    {r.latestNote ?? <span className="text-muted-foreground">No updates</span>}
+                  <td className="px-3 py-2">
+                    {r.priority && (
+                      <span className={cn("text-xs font-medium rounded-full px-2 py-0.5 border", priorityClasses(r.priority as Priority))}>
+                        {r.priority}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {r.due_date ? (
+                      <span className={cn(overdue && "text-[var(--status-blocked)] font-medium")}>
+                        {formatDate(r.due_date)}
+                        {overdue && <span className="ml-1 text-[10px] rounded px-1 py-0.5 border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/10">Overdue</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-3 py-2 max-w-[220px] truncate" title={r.next_action ?? ""}>
+                    {r.next_action ?? <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
-                  <td className="px-3 py-2">{r.weeksTracked}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-0.5">
                       <IconBtn
@@ -359,9 +382,10 @@ function AllProjectsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {rows.length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
+                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
               )}
             </tbody>
           </table>
