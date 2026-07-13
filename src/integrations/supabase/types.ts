@@ -39,36 +39,48 @@ export type Database = {
         Row: {
           archived: boolean
           blocker: string | null
+          category: Database["public"]["Enums"]["project_category"] | null
           created_at: string
           description: string | null
+          due_date: string | null
           featured: boolean
           id: string
           name: string
+          next_action: string | null
           owner_id: string
+          priority: Database["public"]["Enums"]["project_priority"]
           site: Database["public"]["Enums"]["site_code"]
           status: Database["public"]["Enums"]["project_status"]
         }
         Insert: {
           archived?: boolean
           blocker?: string | null
+          category?: Database["public"]["Enums"]["project_category"] | null
           created_at?: string
           description?: string | null
+          due_date?: string | null
           featured?: boolean
           id?: string
           name: string
+          next_action?: string | null
           owner_id: string
+          priority?: Database["public"]["Enums"]["project_priority"]
           site: Database["public"]["Enums"]["site_code"]
           status?: Database["public"]["Enums"]["project_status"]
         }
         Update: {
           archived?: boolean
           blocker?: string | null
+          category?: Database["public"]["Enums"]["project_category"] | null
           created_at?: string
           description?: string | null
+          due_date?: string | null
           featured?: boolean
           id?: string
           name?: string
+          next_action?: string | null
           owner_id?: string
+          priority?: Database["public"]["Enums"]["project_priority"]
           site?: Database["public"]["Enums"]["site_code"]
           status?: Database["public"]["Enums"]["project_status"]
         }
@@ -157,6 +169,14 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "contributor"
+      project_category:
+        | "Efficiency"
+        | "Safety"
+        | "Quality"
+        | "Maintenance"
+        | "Training"
+        | "Cost"
+      project_priority: "Low" | "Medium" | "High"
       project_status:
         | "On Track"
         | "At Risk"
@@ -298,6 +318,15 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "contributor"],
+      project_category: [
+        "Efficiency",
+        "Safety",
+        "Quality",
+        "Maintenance",
+        "Training",
+        "Cost",
+      ],
+      project_priority: ["Low", "Medium", "High"],
       project_status: ["On Track", "At Risk", "Blocked", "Complete", "On Hold"],
       site_code: [
         "Allentown",
