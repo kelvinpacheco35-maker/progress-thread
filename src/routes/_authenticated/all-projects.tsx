@@ -287,6 +287,7 @@ function AllProjectsPage() {
                 <th className="text-left px-3 py-2 font-medium">Status</th>
                 <th className="text-left px-3 py-2 font-medium">Priority</th>
                 <th className="text-left px-3 py-2 font-medium">Due</th>
+                <th className="text-left px-3 py-2 font-medium">Progress</th>
                 <th className="text-left px-3 py-2 font-medium">Next action</th>
                 <th className="text-left px-3 py-2 font-medium">Updated</th>
                 <th className="text-right px-3 py-2 font-medium">Actions</th>
@@ -343,6 +344,14 @@ function AllProjectsPage() {
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
+                  <td className="px-3 py-2 min-w-[110px]">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, r.completion_pct ?? 0))}%` }} />
+                      </div>
+                      <span className="text-xs tabular-nums text-muted-foreground">{r.completion_pct ?? 0}%</span>
+                    </div>
+                  </td>
                   <td className="px-3 py-2 max-w-[220px] truncate" title={r.next_action ?? ""}>
                     {r.next_action ?? <span className="text-muted-foreground">—</span>}
                   </td>
@@ -385,7 +394,7 @@ function AllProjectsPage() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
+                <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -459,6 +468,9 @@ function EditProjectDialog({
   const [priority, setPriority] = useState<Priority>("Medium");
   const [nextAction, setNextAction] = useState("");
   const [category, setCategory] = useState<Category | "">("");
+  const [problemStatement, setProblemStatement] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [completionPct, setCompletionPct] = useState<number>(0);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -471,6 +483,9 @@ function EditProjectDialog({
       setPriority((project.priority as Priority) ?? "Medium");
       setNextAction(project.next_action ?? "");
       setCategory((project.category as Category) ?? "");
+      setProblemStatement(project.problem_statement ?? "");
+      setStartDate(project.start_date ?? "");
+      setCompletionPct(project.completion_pct ?? 0);
     }
   }, [project]);
 
@@ -488,6 +503,9 @@ function EditProjectDialog({
       priority,
       next_action: nextAction.trim() || null,
       category,
+      problem_statement: problemStatement.trim() || null,
+      start_date: startDate || null,
+      completion_pct: Math.max(0, Math.min(100, Number(completionPct) || 0)),
     }).eq("id", project.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -533,6 +551,20 @@ function EditProjectDialog({
               <Label>Due date *</Label>
               <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Start date</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Completion % ({completionPct}%)</Label>
+              <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Problem statement</Label>
+            <Textarea rows={2} value={problemStatement} onChange={(e) => setProblemStatement(e.target.value)} placeholder="Why this project exists — the pain it's solving and the baseline today" />
           </div>
           <div className="space-y-1.5">
             <Label>Next action</Label>
