@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { SITES, STATUSES, currentWeekLabel, formatDate, statusRank, type Status, type Site } from "@/lib/ci";
+import { SITES, STATUSES, PRIORITIES, CATEGORIES, currentWeekLabel, formatDate, statusRank, type Status, type Site, type Priority, type Category } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
