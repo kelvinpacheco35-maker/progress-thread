@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SITES, type Status } from "@/lib/ci";
+import { SITES, formatDate, isOverdue, type Status, type Category } from "@/lib/ci";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/executive-summary")({
   head: () => ({ meta: [{ title: "Executive Summary — CI Status Tracker" }] }),
@@ -18,6 +19,9 @@ type P = {
   site: string;
   status: Status;
   featured: boolean;
+  due_date: string | null;
+  category: Category | null;
+  next_action: string | null;
 };
 type U = { project_id: string; status: Status; note: string; created_at: string };
 
@@ -31,7 +35,7 @@ function ExecutiveSummaryPage() {
       const [{ data: p }, { data: u }] = await Promise.all([
         supabase
           .from("projects")
-          .select("id, name, site, status, featured")
+          .select("id, name, site, status, featured, due_date, category, next_action")
           .eq("featured", true),
         supabase
           .from("weekly_updates")
@@ -58,7 +62,8 @@ function ExecutiveSummaryPage() {
         .map((p) => {
           const l = latest.get(p.id);
           const summary = (l?.note ?? "").split("\n").slice(0, 2).join(" ").trim();
-          return { ...p, currentStatus: (l?.status ?? p.status) as Status, summary };
+          const currentStatus = (l?.status ?? p.status) as Status;
+          return { ...p, currentStatus, summary, overdue: isOverdue(p.due_date, currentStatus) };
         }),
     })).filter((g) => g.rows.length > 0);
   }, [projects, latest]);
@@ -70,7 +75,10 @@ function ExecutiveSummaryPage() {
         (g) =>
           `${g.site}\n` +
           g.rows
-            .map((r) => `  [${r.currentStatus}] ${r.name}${r.summary ? ` — ${r.summary}` : ""}`)
+            .map((r) => {
+              const meta = [r.category, r.due_date ? `due ${formatDate(r.due_date)}${r.overdue ? " OVERDUE" : ""}` : null].filter(Boolean).join(" · ");
+              return `  [${r.currentStatus}] ${r.name}${meta ? ` (${meta})` : ""}${r.summary ? ` — ${r.summary}` : ""}`;
+            })
             .join("\n"),
       )
       .join("\n\n");
@@ -110,7 +118,20 @@ function ExecutiveSummaryPage() {
                   <div key={r.id} className="px-4 py-3 flex items-start gap-3">
                     <StatusBadge status={r.currentStatus} />
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium">{r.name}</div>
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="font-medium">{r.name}</span>
+                        {r.category && (
+                          <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
+                        )}
+                        {r.due_date && (
+                          <span className={cn("text-xs", r.overdue ? "text-[var(--status-blocked)] font-medium" : "text-muted-foreground")}>
+                            Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
+                          </span>
+                        )}
+                      </div>
+                      {r.next_action && (
+                        <p className="text-xs text-primary mt-1"><span className="font-semibold">Next:</span> {r.next_action}</p>
+                      )}
                       {r.summary && (
                         <p className="text-sm text-foreground/80 mt-0.5 line-clamp-2">{r.summary}</p>
                       )}
@@ -125,3 +146,4 @@ function ExecutiveSummaryPage() {
     </div>
   );
 }
+

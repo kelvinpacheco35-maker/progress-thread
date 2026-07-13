@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { SITES, STATUSES, currentWeekLabel, formatDate, statusRank, type Status, type Site } from "@/lib/ci";
+import { SITES, STATUSES, PRIORITIES, CATEGORIES, currentWeekLabel, formatDate, statusRank, type Status, type Site, type Priority, type Category } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +35,7 @@ function MyProjectsPage() {
     setLoading(true);
     const { data: p } = await supabase
       .from("projects")
-      .select("id, name, site, owner_id, status, description, blocker, created_at")
+      .select("id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
     const proj = (p ?? []) as ProjectRow[];
@@ -157,10 +157,21 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
   const [status, setStatus] = useState<Status>("On Track");
   const [description, setDescription] = useState("");
   const [blocker, setBlocker] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<Priority>("Medium");
+  const [nextAction, setNextAction] = useState("");
+  const [category, setCategory] = useState<Category | "">("");
   const [saving, setSaving] = useState(false);
+
+  const reset = () => {
+    setName(""); setDescription(""); setBlocker(""); setStatus("On Track");
+    setDueDate(""); setPriority("Medium"); setNextAction(""); setCategory("");
+  };
 
   const submit = async () => {
     if (!user || !name.trim()) return;
+    if (!dueDate) return toast.error("Due date is required");
+    if (!category) return toast.error("Category is required");
     setSaving(true);
     const { error } = await supabase.from("projects").insert({
       name: name.trim(),
@@ -169,12 +180,16 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
       status,
       description: description.trim() || null,
       blocker: blocker.trim() || null,
+      due_date: dueDate,
+      priority,
+      next_action: nextAction.trim() || null,
+      category,
     });
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success("Project created");
     setOpen(false);
-    setName(""); setDescription(""); setBlocker(""); setStatus("On Track");
+    reset();
     onCreated();
   };
 
@@ -183,7 +198,7 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
       <DialogTrigger asChild>
         <Button><Plus className="w-4 h-4 mr-1" /> New project</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>New CI project</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>Project name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Line 3 changeover reduction" /></div>
@@ -196,19 +211,43 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label>Category *</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                <SelectTrigger><SelectValue placeholder="Choose one" /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
               <Label>Initial status</Label>
               <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Due date *</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Next action</Label>
+            <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" />
           </div>
           <div className="space-y-1.5"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} /></div>
           <div className="space-y-1.5"><Label>Blocker (optional)</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={submit} disabled={saving || !name.trim()}>{saving ? "Saving…" : "Create project"}</Button>
+          <Button onClick={submit} disabled={saving || !name.trim() || !dueDate || !category}>{saving ? "Saving…" : "Create project"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

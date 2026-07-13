@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { SITES, STATUSES, formatDate, statusRank, weeksBetween, daysSince, type Status } from "@/lib/ci";
+import { SITES, STATUSES, PRIORITIES, CATEGORIES, formatDate, statusRank, priorityRank, priorityClasses, isOverdue, weeksBetween, daysSince, type Status, type Priority, type Category } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +25,7 @@ export const Route = createFileRoute("/_authenticated/all-projects")({
 });
 
 type ViewMode = "active" | "completed" | "archived" | "all";
+type SortMode = "risk" | "updated" | "priority" | "due";
 
 function AllProjectsPage() {
   const { isAdmin, loading: authLoading } = useAuth();
@@ -33,9 +34,10 @@ function AllProjectsPage() {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("active");
   const [search, setSearch] = useState("");
-  const [sortByRisk, setSortByRisk] = useState(true);
+  const [sortMode, setSortMode] = useState<SortMode>("risk");
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
@@ -51,7 +53,7 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category").order("created_at", { ascending: false }),
       supabase.from("weekly_updates").select("id, project_id, week_label, status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);
@@ -111,14 +113,23 @@ function AllProjectsPage() {
 
     if (siteFilter !== "all") out = out.filter((r) => r.site === siteFilter);
     if (statusFilter !== "all") out = out.filter((r) => r.currentStatus === statusFilter);
+    if (categoryFilter !== "all") out = out.filter((r) => r.category === categoryFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       out = out.filter((r) => r.name.toLowerCase().includes(q) || (r.owner_name ?? "").toLowerCase().includes(q));
     }
-    if (sortByRisk) out.sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus) || (new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()));
-    else out.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+    const byUpdated = (a: typeof out[number], b: typeof out[number]) =>
+      new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+    if (sortMode === "risk") out.sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus) || byUpdated(a, b));
+    else if (sortMode === "priority") out.sort((a, b) => priorityRank((a.priority ?? "Medium") as Priority) - priorityRank((b.priority ?? "Medium") as Priority) || byUpdated(a, b));
+    else if (sortMode === "due") out.sort((a, b) => {
+      const av = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
+      const bv = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY;
+      return av - bv;
+    });
+    else out.sort(byUpdated);
     return out;
-  }, [projects, latestByProject, profiles, siteFilter, statusFilter, viewMode, search, sortByRisk]);
+  }, [projects, latestByProject, profiles, siteFilter, statusFilter, categoryFilter, viewMode, search, sortMode]);
 
   const siteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -218,9 +229,28 @@ function AllProjectsPage() {
             </SelectContent>
           </Select>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setSortByRisk((v) => !v)}>
-          <ArrowUpDown className="w-4 h-4 mr-1" /> {sortByRisk ? "Risk first" : "Last updated"}
-        </Button>
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Category</div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Sort</div>
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="w-40"><ArrowUpDown className="w-3.5 h-3.5 mr-1" /><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="risk">Risk first</SelectItem>
+              <SelectItem value="priority">Priority</SelectItem>
+              <SelectItem value="due">Due date</SelectItem>
+              <SelectItem value="updated">Last updated</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">
@@ -252,19 +282,23 @@ function AllProjectsPage() {
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Project</th>
                 <th className="text-left px-3 py-2 font-medium">Site</th>
+                <th className="text-left px-3 py-2 font-medium">Category</th>
                 <th className="text-left px-3 py-2 font-medium">Owner</th>
                 <th className="text-left px-3 py-2 font-medium">Status</th>
-                <th className="text-left px-3 py-2 font-medium">Latest update</th>
+                <th className="text-left px-3 py-2 font-medium">Priority</th>
+                <th className="text-left px-3 py-2 font-medium">Due</th>
+                <th className="text-left px-3 py-2 font-medium">Next action</th>
                 <th className="text-left px-3 py-2 font-medium">Updated</th>
-                <th className="text-left px-3 py-2 font-medium">Weeks</th>
                 <th className="text-right px-3 py-2 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r) => {
+                const overdue = isOverdue(r.due_date, r.currentStatus);
+                return (
                 <tr key={r.id} className={cn("border-t border-border hover:bg-muted/30", r.archived && "opacity-60")}>
                   <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
                         {r.name}
                       </button>
@@ -287,13 +321,32 @@ function AllProjectsPage() {
                     )}
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
+                  <td className="px-3 py-2">
+                    {r.category ? (
+                      <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
                   <td className="px-3 py-2"><StatusBadge status={r.currentStatus} /></td>
-                  <td className="px-3 py-2 max-w-[280px] truncate" title={r.latestNote ?? ""}>
-                    {r.latestNote ?? <span className="text-muted-foreground">No updates</span>}
+                  <td className="px-3 py-2">
+                    {r.priority && (
+                      <span className={cn("text-xs font-medium rounded-full px-2 py-0.5 border", priorityClasses(r.priority as Priority))}>
+                        {r.priority}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {r.due_date ? (
+                      <span className={cn(overdue && "text-[var(--status-blocked)] font-medium")}>
+                        {formatDate(r.due_date)}
+                        {overdue && <span className="ml-1 text-[10px] rounded px-1 py-0.5 border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/10">Overdue</span>}
+                      </span>
+                    ) : <span className="text-muted-foreground">—</span>}
+                  </td>
+                  <td className="px-3 py-2 max-w-[220px] truncate" title={r.next_action ?? ""}>
+                    {r.next_action ?? <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
-                  <td className="px-3 py-2">{r.weeksTracked}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-0.5">
                       <IconBtn
@@ -329,9 +382,10 @@ function AllProjectsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {rows.length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
+                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -401,6 +455,10 @@ function EditProjectDialog({
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("On Track");
   const [blocker, setBlocker] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [priority, setPriority] = useState<Priority>("Medium");
+  const [nextAction, setNextAction] = useState("");
+  const [category, setCategory] = useState<Category | "">("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -409,17 +467,27 @@ function EditProjectDialog({
       setDescription(project.description ?? "");
       setStatus(project.status);
       setBlocker(project.blocker ?? "");
+      setDueDate(project.due_date ?? "");
+      setPriority((project.priority as Priority) ?? "Medium");
+      setNextAction(project.next_action ?? "");
+      setCategory((project.category as Category) ?? "");
     }
   }, [project]);
 
   const save = async () => {
     if (!project) return;
+    if (!dueDate) return toast.error("Due date is required");
+    if (!category) return toast.error("Category is required");
     setSaving(true);
     const { error } = await supabase.from("projects").update({
       name: name.trim(),
       description: description.trim() || null,
       status,
       blocker: blocker.trim() || null,
+      due_date: dueDate,
+      priority,
+      next_action: nextAction.trim() || null,
+      category,
     }).eq("id", project.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -430,19 +498,45 @@ function EditProjectDialog({
 
   return (
     <Dialog open={!!project} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit project</DialogTitle>
           <DialogDescription>{project?.site} · Owner {project?.owner_name ?? "—"}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Category *</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                <SelectTrigger><SelectValue placeholder="Choose one" /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Priority</Label>
+              <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Due date *</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
           <div className="space-y-1.5">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-            </Select>
+            <Label>Next action</Label>
+            <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next" />
           </div>
           <div className="space-y-1.5"><Label>Description</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Blocker</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
