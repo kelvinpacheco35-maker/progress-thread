@@ -1,7 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDate } from "@/lib/ci";
-import type { Status } from "@/lib/ci";
+import { formatDate, priorityClasses, isOverdue } from "@/lib/ci";
+import type { Status, Priority, Category } from "@/lib/ci";
+import { cn } from "@/lib/utils";
 
 export type UpdateRow = {
   id: string;
@@ -27,6 +28,10 @@ export type ProjectRow = {
   created_at: string;
   featured?: boolean;
   archived?: boolean;
+  due_date?: string | null;
+  priority?: Priority;
+  next_action?: string | null;
+  category?: Category | null;
 };
 
 export function ProjectHistoryDialog({
