@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Copy, Check, ArrowUpDown } from "lucide-react";
+import { Copy, Check, ArrowUpDown, Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/all-projects")({
   head: () => ({ meta: [{ title: "All Projects — CI Status Tracker" }] }),
@@ -36,7 +37,7 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, created_at").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, created_at").order("created_at", { ascending: false }),
       supabase.from("weekly_updates").select("id, project_id, week_label, status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);

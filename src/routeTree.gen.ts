@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSummaryRouteImport } from './routes/_authenticated/summary'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedMyProjectsRouteImport } from './routes/_authenticated/my-projects'
+import { Route as AuthenticatedExecutiveSummaryRouteImport } from './routes/_authenticated/executive-summary'
 import { Route as AuthenticatedAllProjectsRouteImport } from './routes/_authenticated/all-projects'
 
 const AuthRoute = AuthRouteImport.update({
@@ -46,6 +47,12 @@ const AuthenticatedMyProjectsRoute = AuthenticatedMyProjectsRouteImport.update({
   path: '/my-projects',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedExecutiveSummaryRoute =
+  AuthenticatedExecutiveSummaryRouteImport.update({
+    id: '/executive-summary',
+    path: '/executive-summary',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAllProjectsRoute =
   AuthenticatedAllProjectsRouteImport.update({
     id: '/all-projects',
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/all-projects': typeof AuthenticatedAllProjectsRoute
+  '/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/my-projects': typeof AuthenticatedMyProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/summary': typeof AuthenticatedSummaryRoute
@@ -65,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/all-projects': typeof AuthenticatedAllProjectsRoute
+  '/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/my-projects': typeof AuthenticatedMyProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/summary': typeof AuthenticatedSummaryRoute
@@ -75,6 +84,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/all-projects': typeof AuthenticatedAllProjectsRoute
+  '/_authenticated/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/_authenticated/my-projects': typeof AuthenticatedMyProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/summary': typeof AuthenticatedSummaryRoute
@@ -85,6 +95,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/all-projects'
+    | '/executive-summary'
     | '/my-projects'
     | '/settings'
     | '/summary'
@@ -93,6 +104,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/all-projects'
+    | '/executive-summary'
     | '/my-projects'
     | '/settings'
     | '/summary'
@@ -102,6 +114,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/all-projects'
+    | '/_authenticated/executive-summary'
     | '/_authenticated/my-projects'
     | '/_authenticated/settings'
     | '/_authenticated/summary'
@@ -157,6 +170,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyProjectsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/executive-summary': {
+      id: '/_authenticated/executive-summary'
+      path: '/executive-summary'
+      fullPath: '/executive-summary'
+      preLoaderRoute: typeof AuthenticatedExecutiveSummaryRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/all-projects': {
       id: '/_authenticated/all-projects'
       path: '/all-projects'
@@ -169,6 +189,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAllProjectsRoute: typeof AuthenticatedAllProjectsRoute
+  AuthenticatedExecutiveSummaryRoute: typeof AuthenticatedExecutiveSummaryRoute
   AuthenticatedMyProjectsRoute: typeof AuthenticatedMyProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSummaryRoute: typeof AuthenticatedSummaryRoute
@@ -176,6 +197,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAllProjectsRoute: AuthenticatedAllProjectsRoute,
+  AuthenticatedExecutiveSummaryRoute: AuthenticatedExecutiveSummaryRoute,
   AuthenticatedMyProjectsRoute: AuthenticatedMyProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSummaryRoute: AuthenticatedSummaryRoute,
