@@ -17,6 +17,40 @@ export const STATUSES = [
 ] as const;
 export type Status = (typeof STATUSES)[number];
 
+export const PRIORITIES = ["Low", "Medium", "High"] as const;
+export type Priority = (typeof PRIORITIES)[number];
+
+export const CATEGORIES = [
+  "Efficiency",
+  "Safety",
+  "Quality",
+  "Maintenance",
+  "Training",
+  "Cost",
+] as const;
+export type Category = (typeof CATEGORIES)[number];
+
+export function priorityClasses(p: Priority): string {
+  switch (p) {
+    case "High":
+      return "bg-[var(--status-blocked)]/10 text-[var(--status-blocked)] border-[var(--status-blocked)]/30";
+    case "Medium":
+      return "bg-[var(--status-atrisk)]/10 text-[var(--status-atrisk)] border-[var(--status-atrisk)]/30";
+    case "Low":
+      return "bg-muted text-muted-foreground border-border";
+  }
+}
+
+export function priorityRank(p: Priority): number {
+  return p === "High" ? 0 : p === "Medium" ? 1 : 2;
+}
+
+export function isOverdue(dueDate: string | null | undefined, status: Status): boolean {
+  if (!dueDate || status === "Complete") return false;
+  const d = new Date(dueDate + "T23:59:59");
+  return d.getTime() < Date.now();
+}
+
 export function statusClasses(status: Status): string {
   switch (status) {
     case "On Track":
