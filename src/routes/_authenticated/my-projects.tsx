@@ -284,9 +284,20 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
   const [note, setNote] = useState("");
   const [blocker, setBlocker] = useState("");
   const [weekLabel, setWeekLabel] = useState<string>(currentWeekLabel());
+  const [completionPct, setCompletionPct] = useState<number>(0);
+  const [nextAction, setNextAction] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const sorted = useMemo(() => [...projects].sort((a, b) => statusRank(a.status) - statusRank(b.status)), [projects]);
+
+  // Prefill progress & next action from the selected project
+  useEffect(() => {
+    const p = projects.find((x) => x.id === projectId);
+    if (p) {
+      setCompletionPct(typeof p.completion_pct === "number" ? p.completion_pct : 0);
+      setNextAction(p.next_action ?? "");
+    }
+  }, [projectId, projects]);
 
   const submit = async () => {
     if (!user || !projectId || !note.trim() || !weekLabel) return;
@@ -300,14 +311,21 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
       blocker: blocker.trim() || null,
     });
     if (uErr) { setSaving(false); return toast.error(uErr.message); }
+    const projectPatch: Record<string, unknown> = {
+      completion_pct: completionPct,
+      next_action: nextAction.trim() || null,
+    };
     // Only sync the project's current status if logging for the current week
     if (weekLabel === currentWeekLabel()) {
-      await supabase.from("projects").update({ status, blocker: blocker.trim() || null }).eq("id", projectId);
+      projectPatch.status = status;
+      projectPatch.blocker = blocker.trim() || null;
     }
+    await supabase.from("projects").update(projectPatch).eq("id", projectId);
     setSaving(false);
     toast.success("Update logged");
     setOpen(false);
     setNote(""); setBlocker(""); setStatus("On Track"); setProjectId(""); setWeekLabel(currentWeekLabel());
+    setCompletionPct(0); setNextAction("");
     onCreated();
   };
 
