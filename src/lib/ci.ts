@@ -58,6 +58,24 @@ export function currentWeekLabel(d: Date = new Date()): string {
   return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
 }
 
+// Convert an <input type="week"> value like "2026-W28" to a Date at Monday of that week.
+export function weekLabelToDate(label: string): Date {
+  const m = /^(\d{4})-W(\d{2})$/.exec(label);
+  if (!m) return new Date();
+  const year = Number(m[1]);
+  const week = Number(m[2]);
+  const jan4 = new Date(Date.UTC(year, 0, 4));
+  const jan4Day = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (jan4Day - 1) + (week - 1) * 7);
+  return monday;
+}
+
+export function daysSince(d: string | Date): number {
+  const start = typeof d === "string" ? new Date(d) : d;
+  return Math.floor((Date.now() - start.getTime()) / 86400000);
+}
+
 export function monthLabel(d: Date | string): string {
   const date = typeof d === "string" ? new Date(d) : d;
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
