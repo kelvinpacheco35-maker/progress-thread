@@ -14,16 +14,156 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          site: Database["public"]["Enums"]["site_code"]
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id: string
+          site: Database["public"]["Enums"]["site_code"]
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          site?: Database["public"]["Enums"]["site_code"]
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          blocker: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          site: Database["public"]["Enums"]["site_code"]
+          status: Database["public"]["Enums"]["project_status"]
+        }
+        Insert: {
+          blocker?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          site: Database["public"]["Enums"]["site_code"]
+          status?: Database["public"]["Enums"]["project_status"]
+        }
+        Update: {
+          blocker?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          site?: Database["public"]["Enums"]["site_code"]
+          status?: Database["public"]["Enums"]["project_status"]
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_updates: {
+        Row: {
+          author_id: string
+          blocker: string | null
+          created_at: string
+          id: string
+          note: string
+          project_id: string
+          reviewed: boolean
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          week_label: string
+        }
+        Insert: {
+          author_id: string
+          blocker?: string | null
+          created_at?: string
+          id?: string
+          note: string
+          project_id: string
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status: Database["public"]["Enums"]["project_status"]
+          week_label: string
+        }
+        Update: {
+          author_id?: string
+          blocker?: string | null
+          created_at?: string
+          id?: string
+          note?: string
+          project_id?: string
+          reviewed?: boolean
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["project_status"]
+          week_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "contributor"
+      project_status:
+        | "On Track"
+        | "At Risk"
+        | "Blocked"
+        | "Complete"
+        | "On Hold"
+      site_code:
+        | "Allentown"
+        | "Modesto"
+        | "Midlothian"
+        | "Alexandria"
+        | "3rd Ave"
+        | "EPIC"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +290,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "contributor"],
+      project_status: ["On Track", "At Risk", "Blocked", "Complete", "On Hold"],
+      site_code: [
+        "Allentown",
+        "Modesto",
+        "Midlothian",
+        "Alexandria",
+        "3rd Ave",
+        "EPIC",
+      ],
+    },
   },
 } as const
