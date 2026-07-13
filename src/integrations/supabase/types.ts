@@ -40,6 +40,7 @@ export type Database = {
           blocker: string | null
           created_at: string
           description: string | null
+          featured: boolean
           id: string
           name: string
           owner_id: string
@@ -50,6 +51,7 @@ export type Database = {
           blocker?: string | null
           created_at?: string
           description?: string | null
+          featured?: boolean
           id?: string
           name: string
           owner_id: string
@@ -60,6 +62,7 @@ export type Database = {
           blocker?: string | null
           created_at?: string
           description?: string | null
+          featured?: boolean
           id?: string
           name?: string
           owner_id?: string
