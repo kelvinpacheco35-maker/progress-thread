@@ -35,7 +35,7 @@ function MyProjectsPage() {
     setLoading(true);
     const { data: p } = await supabase
       .from("projects")
-      .select("id, name, site, owner_id, status, description, blocker, created_at")
+      .select("id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category")
       .eq("owner_id", user.id)
       .order("created_at", { ascending: false });
     const proj = (p ?? []) as ProjectRow[];
