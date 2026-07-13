@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { SITES, STATUSES, currentWeekLabel, formatDate, statusRank, type Status } from "@/lib/ci";
+import { SITES, STATUSES, currentWeekLabel, formatDate, statusRank, type Status, type Site } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,11 +149,11 @@ function MyProjectsPage() {
   );
 }
 
-function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; defaultSite: string }) {
+function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; defaultSite: Site }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [site, setSite] = useState(defaultSite);
+  const [site, setSite] = useState<Site>(defaultSite);
   const [status, setStatus] = useState<Status>("On Track");
   const [description, setDescription] = useState("");
   const [blocker, setBlocker] = useState("");
@@ -190,7 +190,7 @@ function NewProjectDialog({ onCreated, defaultSite }: { onCreated: () => void; d
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Site</Label>
-              <Select value={site} onValueChange={setSite}>
+              <Select value={site} onValueChange={(v) => setSite(v as Site)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{SITES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
