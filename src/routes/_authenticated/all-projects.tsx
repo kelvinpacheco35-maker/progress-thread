@@ -43,6 +43,8 @@ function AllProjectsPage() {
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
   const [deleteProject, setDeleteProject] = useState<ProjectRow | null>(null);
+  const [rejectProject, setRejectProject] = useState<ProjectRow | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
