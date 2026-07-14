@@ -60,33 +60,50 @@ function SummaryPage() {
 
   const perSite = useMemo(() => {
     return SITES.map((site) => {
-      const siteProjects = projects.filter((p) => p.site === site);
+      const siteAll = projects.filter((p) => p.site === site);
+      const siteProjects = siteAll.filter((p) => (p.entry_type ?? "project") === "project");
+      const siteSupport = siteAll.filter((p) => p.entry_type === "support");
       const activeProjects = siteProjects.filter((p) => p.status !== "Complete");
       const statusCounts: Record<Status, number> = {
         "On Track": 0, "At Risk": 0, "Blocked": 0, "Complete": 0, "On Hold": 0,
       };
-      const latest = new Map<string, Status>();
-      for (const u of updates) if (!latest.has(u.project_id)) latest.set(u.project_id, u.status);
+      const latestP = new Map<string, Status>();
+      const latestS = new Map<string, SupportStatus>();
+      for (const u of updates) {
+        if (u.status && !latestP.has(u.project_id)) latestP.set(u.project_id, u.status);
+        if (u.support_status && !latestS.has(u.project_id)) latestS.set(u.project_id, u.support_status);
+      }
       for (const p of siteProjects) {
-        const s = latest.get(p.id) ?? p.status;
+        const s = latestP.get(p.id) ?? p.status;
         statusCounts[s] += 1;
       }
-      const bucketUpdates = updates.filter((u) => bucketOf(u) === currentBucket && siteProjects.some((p) => p.id === u.project_id));
+      // Support counts for this period
+      let supportOpen = 0;
+      let supportCompletedPeriod = 0;
+      for (const s of siteSupport) {
+        const cur = latestS.get(s.id) ?? s.support_status ?? "Open";
+        if (cur !== "Done") supportOpen += 1;
+      }
+      const bucketUpdates = updates.filter((u) => bucketOf(u) === currentBucket && siteAll.some((p) => p.id === u.project_id));
+      const projectBucketUpdates = bucketUpdates.filter((u) => u.status !== null);
       const newProjects = siteProjects.filter((p) => bucketOfDate(p.created_at) === currentBucket);
-      const completions = bucketUpdates.filter((u) => u.status === "Complete");
-      const changes = bucketUpdates.map((u) => ({
+      const completions = projectBucketUpdates.filter((u) => u.status === "Complete");
+      supportCompletedPeriod = bucketUpdates.filter((u) => u.support_status === "Done" && siteSupport.some((s) => s.id === u.project_id)).length;
+      const changes = projectBucketUpdates.map((u) => ({
         projectName: siteProjects.find((p) => p.id === u.project_id)?.name ?? "—",
-        status: u.status, note: u.note,
+        status: u.status as Status, note: u.note,
       }));
 
-      // Prior-period delta: new in prior period minus completions in prior period
       const priorNew = siteProjects.filter((p) => bucketOfDate(p.created_at) === priorBucket).length;
       const priorCompletions = updates.filter((u) => bucketOf(u) === priorBucket && u.status === "Complete" && siteProjects.some((p) => p.id === u.project_id)).length;
       const currDelta = newProjects.length - completions.length;
       const priorDelta = priorNew - priorCompletions;
       const delta = currDelta - priorDelta;
 
-      return { site, activeCount: activeProjects.length, statusCounts, newProjects, completions, changes, delta };
+      return {
+        site, activeCount: activeProjects.length, statusCounts, newProjects, completions, changes, delta,
+        supportTotal: siteSupport.length, supportOpen, supportCompletedPeriod,
+      };
     });
   }, [projects, updates, currentBucket, priorBucket, mode]);
 
