@@ -218,6 +218,17 @@ function AllProjectsPage() {
           </Select>
         </div>
         <div className="space-y-1">
+          <div className="text-xs font-medium text-muted-foreground">Type</div>
+          <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as "all" | EntryType)}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="project">Projects</SelectItem>
+              <SelectItem value="support">Support</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
           <div className="text-xs font-medium text-muted-foreground">Site</div>
           <Select value={siteFilter} onValueChange={setSiteFilter}>
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
@@ -233,7 +244,8 @@ function AllProjectsPage() {
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              {STATUSES.map((s) => <SelectItem key={`p-${s}`} value={s}>{s}</SelectItem>)}
+              {SUPPORT_STATUSES.map((s) => <SelectItem key={`s-${s}`} value={s}>{s} (support)</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
