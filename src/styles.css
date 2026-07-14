@@ -85,6 +85,11 @@
   --status-complete: #3A6EA5;
   --status-hold: #6B7280;
 
+  /* Support status tokens — distinct family from project statuses */
+  --support-open: #0284C7;       /* sky */
+  --support-inprogress: #7C3AED; /* violet */
+  --support-done: #0F766E;       /* teal */
+
   --sidebar: #1C4C77;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #FFFFFF;
