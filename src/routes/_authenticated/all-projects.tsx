@@ -223,7 +223,8 @@ function AllProjectsPage() {
     const isSupport = rejectProject.entry_type === "support";
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    const approverName = uid ? (profiles[uid] ?? "admin") : "admin";
+    if (!uid) return toast.error("Not signed in");
+    const approverName = profiles[uid] ?? "admin";
     const reason = rejectReason.trim();
     const { error } = await supabase.from("projects").update({
       pending_approval: false,
