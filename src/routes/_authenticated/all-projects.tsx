@@ -190,6 +190,60 @@ function AllProjectsPage() {
     load();
   };
 
+  const approveClosure = async (r: ProjectRow) => {
+    const isSupport = r.entry_type === "support";
+    const patch: Record<string, unknown> = {
+      pending_approval: false,
+      approved_at: new Date().toISOString(),
+      approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+      rejection_reason: null,
+    };
+    if (isSupport) patch.support_status = "Done";
+    else patch.status = "Complete";
+    const { error } = await supabase.from("projects").update(patch).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    const approverName = uid ? (profiles[uid] ?? "admin") : "admin";
+    await supabase.from("weekly_updates").insert({
+      project_id: r.id,
+      author_id: uid,
+      week_label: `approval-${new Date().toISOString().slice(0, 10)}`,
+      status: isSupport ? null : "Complete",
+      support_status: isSupport ? "Done" : null,
+      note: `✓ Closure approved by ${approverName}`,
+    });
+    toast.success(isSupport ? "Support item closed" : "Project completed");
+    load();
+  };
+
+  const rejectClosure = async () => {
+    if (!rejectProject) return;
+    const isSupport = rejectProject.entry_type === "support";
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    const approverName = uid ? (profiles[uid] ?? "admin") : "admin";
+    const reason = rejectReason.trim();
+    const { error } = await supabase.from("projects").update({
+      pending_approval: false,
+      rejection_reason: reason || "No reason given",
+    }).eq("id", rejectProject.id);
+    if (error) return toast.error(error.message);
+    await supabase.from("weekly_updates").insert({
+      project_id: rejectProject.id,
+      author_id: uid,
+      week_label: `rejection-${new Date().toISOString().slice(0, 10)}`,
+      status: null,
+      support_status: null,
+      note: `✗ Closure rejected by ${approverName}${reason ? `: ${reason}` : ""}`,
+    });
+    toast.success("Closure rejected");
+    setRejectProject(null);
+    setRejectReason("");
+    load();
+  };
+
+
   if (authLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return null;
 
