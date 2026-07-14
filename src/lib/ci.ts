@@ -17,6 +17,12 @@ export const STATUSES = [
 ] as const;
 export type Status = (typeof STATUSES)[number];
 
+export const SUPPORT_STATUSES = ["Open", "In Progress", "Done"] as const;
+export type SupportStatus = (typeof SUPPORT_STATUSES)[number];
+
+export const ENTRY_TYPES = ["project", "support"] as const;
+export type EntryType = (typeof ENTRY_TYPES)[number];
+
 export const PRIORITIES = ["Low", "Medium", "High"] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
