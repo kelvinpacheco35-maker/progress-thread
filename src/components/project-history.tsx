@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
 import { formatDate, priorityClasses, isOverdue } from "@/lib/ci";
 import type { Status, SupportStatus, Priority, Category, EntryType } from "@/lib/ci";
 import { cn } from "@/lib/utils";
