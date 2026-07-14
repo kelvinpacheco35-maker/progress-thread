@@ -54,7 +54,7 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason").order("created_at", { ascending: false }),
       supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);
