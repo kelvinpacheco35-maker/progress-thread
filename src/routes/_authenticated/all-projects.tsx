@@ -156,7 +156,7 @@ function AllProjectsPage() {
     const items = rows.filter((r) => r.site === site && !r.latestReviewed && r.latestNote);
     if (items.length === 0) return toast.info("Nothing new to copy for " + site);
     const text = items
-      .map((r) => `[${r.currentStatus}] ${r.name}: ${r.latestNote}${r.latestBlocker ? ` (Blocker: ${r.latestBlocker})` : ""}`)
+      .map((r) => `[${r.displayStatus}] ${r.name}: ${r.latestNote}${r.latestBlocker ? ` (Blocker: ${r.latestBlocker})` : ""}`)
       .join("\n");
     await navigator.clipboard.writeText(text);
     toast.success(`Copied ${items.length} update(s) for ${site}`);
@@ -303,7 +303,7 @@ function AllProjectsPage() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const overdue = isOverdue(r.due_date, r.currentStatus);
+                const overdue = isOverdue(r.due_date, r.displayStatus);
                 return (
                 <tr key={r.id} className={cn("border-t border-border hover:bg-muted/30", r.archived && "opacity-60")}>
                   <td className="px-3 py-2">
@@ -336,7 +336,7 @@ function AllProjectsPage() {
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
-                  <td className="px-3 py-2"><StatusBadge status={r.currentStatus} /></td>
+                  <td className="px-3 py-2"><StatusBadge status={r.displayStatus} /></td>
                   <td className="px-3 py-2">
                     {r.priority && (
                       <span className={cn("text-xs font-medium rounded-full px-2 py-0.5 border", priorityClasses(r.priority as Priority))}>
