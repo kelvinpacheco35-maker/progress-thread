@@ -26,6 +26,7 @@ type P = {
   priority: Priority | null;
   next_action: string | null;
   requester: string | null;
+  owner_id: string;
 };
 type U = { project_id: string; status: Status | null; support_status: SupportStatus | null; note: string; created_at: string };
 
