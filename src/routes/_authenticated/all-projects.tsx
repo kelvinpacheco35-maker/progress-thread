@@ -416,9 +416,13 @@ function AllProjectsPage() {
                   </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
                   <td className="px-3 py-2">
-                    {r.isSupport
-                      ? <SupportStatusBadge status={r.supportStatus} />
-                      : <StatusBadge status={r.projectStatus} />}
+                    {r.pending_approval ? (
+                      <PendingApprovalBadge />
+                    ) : r.isSupport ? (
+                      <SupportStatusBadge status={r.supportStatus} />
+                    ) : (
+                      <StatusBadge status={r.projectStatus} />
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {r.priority && (
