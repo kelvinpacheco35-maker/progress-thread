@@ -376,15 +376,19 @@ function AllProjectsPage() {
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2 min-w-[110px]">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, r.completion_pct ?? 0))}%` }} />
+                    {r.isSupport ? (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, r.completion_pct ?? 0))}%` }} />
+                        </div>
+                        <span className="text-xs tabular-nums text-muted-foreground">{r.completion_pct ?? 0}%</span>
                       </div>
-                      <span className="text-xs tabular-nums text-muted-foreground">{r.completion_pct ?? 0}%</span>
-                    </div>
+                    )}
                   </td>
-                  <td className="px-3 py-2 max-w-[220px] truncate" title={r.next_action ?? ""}>
-                    {r.next_action ?? <span className="text-muted-foreground">—</span>}
+                  <td className="px-3 py-2 max-w-[220px] truncate" title={r.isSupport ? (r.description ?? "") : (r.next_action ?? "")}>
+                    {r.isSupport ? (r.description ?? <span className="text-muted-foreground">—</span>) : (r.next_action ?? <span className="text-muted-foreground">—</span>)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
                   <td className="px-3 py-2 text-right">
