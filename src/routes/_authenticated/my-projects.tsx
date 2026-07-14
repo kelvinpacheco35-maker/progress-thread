@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { priorityClasses } from "@/lib/ci";
 
