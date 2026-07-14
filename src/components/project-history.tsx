@@ -71,7 +71,9 @@ export function ProjectHistoryDialog({
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {project.name}
             <EntryTypeBadge type={isSupport ? "support" : "project"} />
-            {isSupport ? (
+            {project.pending_approval ? (
+              <PendingApprovalBadge />
+            ) : isSupport ? (
               <SupportStatusBadge status={(project.support_status ?? "Open") as SupportStatus} />
             ) : (
               <StatusBadge status={project.status} />
