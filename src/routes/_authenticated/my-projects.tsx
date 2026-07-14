@@ -194,6 +194,13 @@ function MyProjectsPage() {
           (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         ) : []}
       />
+
+      <LogUpdateDialog
+        open={!!logUpdateFor}
+        onOpenChange={(v) => !v && setLogUpdateFor(null)}
+        project={logUpdateFor}
+        onCreated={load}
+      />
     </div>
   );
 }
