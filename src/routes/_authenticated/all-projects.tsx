@@ -445,7 +445,7 @@ function AllProjectsPage() {
         ) : []}
       />
 
-      <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} />
+      <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} profiles={profiles} />
 
       <AlertDialog open={!!deleteProject} onOpenChange={(v) => !v && setDeleteProject(null)}>
         <AlertDialogContent>
@@ -493,8 +493,9 @@ function IconBtn({
 }
 
 function EditProjectDialog({
-  project, onOpenChange, onSaved,
-}: { project: ProjectRow | null; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  project, onOpenChange, onSaved, profiles,
+}: { project: ProjectRow | null; onOpenChange: (v: boolean) => void; onSaved: () => void; profiles: Record<string, string> }) {
+  const { isAdmin, profile: currentProfile } = useAuth();
   const isSupport = project?.entry_type === "support";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -509,6 +510,7 @@ function EditProjectDialog({
   const [startDate, setStartDate] = useState("");
   const [completionPct, setCompletionPct] = useState<number>(0);
   const [requester, setRequester] = useState("");
+  const [ownerId, setOwnerId] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -526,12 +528,19 @@ function EditProjectDialog({
       setStartDate(project.start_date ?? "");
       setCompletionPct(project.completion_pct ?? 0);
       setRequester(project.requester ?? "");
+      setOwnerId(project.owner_id);
     }
   }, [project]);
+
+  const ownerOptions = useMemo(
+    () => Object.entries(profiles).sort((a, b) => a[1].localeCompare(b[1])),
+    [profiles],
+  );
 
   const save = async () => {
     if (!project) return;
     setSaving(true);
+    const ownerChanged = isAdmin && ownerId && ownerId !== project.owner_id;
     if (isSupport) {
       const { error } = await supabase.from("projects").update({
         name: name.trim(),
@@ -540,10 +549,9 @@ function EditProjectDialog({
         due_date: dueDate || null,
         priority,
         requester: requester.trim() || null,
+        ...(ownerChanged ? { owner_id: ownerId } : {}),
       }).eq("id", project.id);
-      setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Support item updated");
+      if (error) { setSaving(false); return toast.error(error.message); }
     } else {
       if (!dueDate) { setSaving(false); return toast.error("Due date is required"); }
       if (!category) { setSaving(false); return toast.error("Category is required"); }
@@ -559,11 +567,28 @@ function EditProjectDialog({
         problem_statement: problemStatement.trim() || null,
         start_date: startDate || null,
         completion_pct: Math.max(0, Math.min(100, Number(completionPct) || 0)),
+        ...(ownerChanged ? { owner_id: ownerId } : {}),
       }).eq("id", project.id);
-      setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Project updated");
+      if (error) { setSaving(false); return toast.error(error.message); }
     }
+
+    if (ownerChanged && currentProfile) {
+      const fromName = profiles[project.owner_id] ?? "unknown";
+      const toName = profiles[ownerId] ?? "unknown";
+      const note = `Reassigned from ${fromName} to ${toName} by ${currentProfile.full_name}`;
+      const { error: logErr } = await supabase.from("weekly_updates").insert({
+        project_id: project.id,
+        author_id: currentProfile.id,
+        week_label: `reassign-${new Date().toISOString().slice(0, 10)}`,
+        note,
+        status: isSupport ? null : status,
+        support_status: isSupport ? supportStatus : null,
+      });
+      if (logErr) toast.error(`Saved, but reassignment log failed: ${logErr.message}`);
+    }
+
+    setSaving(false);
+    toast.success(isSupport ? "Support item updated" : "Project updated");
     onOpenChange(false);
     onSaved();
   };
@@ -577,6 +602,24 @@ function EditProjectDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>{isSupport ? "Title" : "Name"}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          {isAdmin && (
+            <div className="space-y-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+              <Label className="text-primary">Owner (admin)</Label>
+              <Select value={ownerId} onValueChange={setOwnerId}>
+                <SelectTrigger><SelectValue placeholder="Select owner" /></SelectTrigger>
+                <SelectContent>
+                  {ownerOptions.map(([id, fullName]) => (
+                    <SelectItem key={id} value={id}>{fullName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {project && ownerId !== project.owner_id && (
+                <p className="text-xs text-primary">
+                  Reassignment will be logged in the entry's history.
+                </p>
+              )}
+            </div>
+          )}
           {isSupport ? (
             <>
               <div className="grid grid-cols-2 gap-3">
