@@ -46,22 +46,29 @@ function statusAccent(s: Status | SupportStatus): string {
 function ExecutiveSummaryPage() {
   const [projects, setProjects] = useState<P[]>([]);
   const [updates, setUpdates] = useState<U[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
-      const [{ data: p }, { data: u }] = await Promise.all([
+      const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
         supabase
           .from("projects")
-          .select("id, name, site, status, support_status, entry_type, featured, due_date, category, priority, next_action, requester")
+          .select("id, name, site, status, support_status, entry_type, featured, due_date, category, priority, next_action, requester, owner_id")
           .eq("featured", true),
         supabase
           .from("weekly_updates")
           .select("project_id, status, support_status, note, created_at")
           .order("created_at", { ascending: false }),
+        supabase.from("profiles").select("id, full_name"),
       ]);
       setProjects((p ?? []) as unknown as P[]);
       setUpdates((u ?? []) as unknown as U[]);
+      const map: Record<string, string> = {};
+      for (const row of (pr ?? []) as Array<{ id: string; full_name: string | null }>) {
+        map[row.id] = row.full_name ?? "—";
+      }
+      setProfiles(map);
       setLoading(false);
     })();
   }, []);
