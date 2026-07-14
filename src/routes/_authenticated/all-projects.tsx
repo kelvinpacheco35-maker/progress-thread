@@ -54,12 +54,12 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct").order("created_at", { ascending: false }),
-      supabase.from("weekly_updates").select("id, project_id, week_label, status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester").order("created_at", { ascending: false }),
+      supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);
-    setProjects((p ?? []) as ProjectRow[]);
-    setUpdates((u ?? []) as (UpdateRow & { project_id: string })[]);
+    setProjects((p ?? []) as unknown as ProjectRow[]);
+    setUpdates((u ?? []) as unknown as (UpdateRow & { project_id: string })[]);
     const m: Record<string, string> = {};
     (pr ?? []).forEach((x: { id: string; full_name: string }) => (m[x.id] = x.full_name));
     setProfiles(m);
