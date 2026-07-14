@@ -205,10 +205,10 @@ function MyProjectsPage() {
   );
 }
 
-function NewEntryDialog({ onCreated, defaultSite }: { onCreated: () => void; defaultSite: Site }) {
+function NewEntryDialog({ onCreated, defaultSite, fixedType }: { onCreated: () => void; defaultSite: Site; fixedType: EntryType }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [entryType, setEntryType] = useState<EntryType>("project");
+  const entryType: EntryType = fixedType;
 
   // Shared
   const [name, setName] = useState("");
