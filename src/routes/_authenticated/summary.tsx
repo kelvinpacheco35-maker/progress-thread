@@ -155,6 +155,10 @@ function SummaryPage() {
         />
       </div>
 
+      <CompletionChart projects={projects} updates={updates} mode={mode} />
+
+
+
       <div className="grid gap-4 md:grid-cols-2">
         {perSite.map((s) => {
           const noActivity = s.newProjects.length === 0 && s.completions.length === 0 && s.changes.length === 0;
