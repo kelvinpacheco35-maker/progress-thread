@@ -120,6 +120,10 @@
   --border: #26313D;
   --input: #26313D;
   --ring: #4A93CC;
+
+  --support-open: #38BDF8;
+  --support-inprogress: #A78BFA;
+  --support-done: #2DD4BF;
 }
 
 @layer base {
