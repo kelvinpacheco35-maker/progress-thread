@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status } from "@/lib/ci";
+import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status, type SupportStatus, type EntryType } from "@/lib/ci";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/status-badge";
@@ -15,12 +15,13 @@ type Row = {
   id: string;
   project_id: string;
   week_label: string;
-  status: Status;
+  status: Status | null;
+  support_status: SupportStatus | null;
   note: string;
   created_at: string;
 };
 
-type Proj = { id: string; name: string; site: string; status: Status; created_at: string };
+type Proj = { id: string; name: string; site: string; status: Status; support_status: SupportStatus | null; entry_type: EntryType; created_at: string };
 
 function priorWeekLabel(): string {
   const d = new Date();
@@ -43,11 +44,11 @@ function SummaryPage() {
   useEffect(() => {
     (async () => {
       const [{ data: p }, { data: u }] = await Promise.all([
-        supabase.from("projects").select("id, name, site, status, created_at"),
-        supabase.from("weekly_updates").select("id, project_id, week_label, status, note, created_at").order("created_at", { ascending: false }),
+        supabase.from("projects").select("id, name, site, status, support_status, entry_type, created_at"),
+        supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, created_at").order("created_at", { ascending: false }),
       ]);
-      setProjects((p ?? []) as Proj[]);
-      setUpdates((u ?? []) as Row[]);
+      setProjects((p ?? []) as unknown as Proj[]);
+      setUpdates((u ?? []) as unknown as Row[]);
       setLoading(false);
     })();
   }, []);
