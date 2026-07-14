@@ -162,58 +162,83 @@ function ExecutiveSummaryPage() {
       </div>
 
       <div className="space-y-6">
-        {bySite.map((g) => (
-          <section key={g.site}>
-            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              {g.site}
-            </h2>
-            {g.rows.length === 0 ? (
-              <div className="rounded-md border border-border bg-card px-4 py-4 text-sm text-muted-foreground italic">
-                No entries featured yet
+        {bySite.map((g) => {
+          const projectRows = g.rows.filter((r) => !r.isSupport);
+          const supportRows = g.rows.filter((r) => r.isSupport);
+          const renderRow = (r: typeof g.rows[number]) => (
+            <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
+              {r.isSupport
+                ? <SupportStatusBadge status={r.currentStatus as SupportStatus} />
+                : <StatusBadge status={r.currentStatus as Status} />}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center flex-wrap gap-2">
+                  <EntryTypeBadge type={r.isSupport ? "support" : "project"} />
+                  <span className="font-medium">{r.name}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Owner: {profiles[r.owner_id] ?? "—"}
+                </p>
+                <div className="flex items-center flex-wrap gap-2 mt-1">
+                  {!r.isSupport && (r.category ? (
+                    <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
+                  ) : (
+                    <span className="text-xs rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground italic">No category</span>
+                  ))}
+                  {r.priority && (
+                    <span className={cn("text-xs rounded-full px-2 py-0.5 border", priorityClasses(r.priority))}>{r.priority}</span>
+                  )}
+                  {r.due_date ? (
+                    <span className={cn("text-xs", r.overdue ? "text-[var(--status-blocked)] font-medium" : "text-muted-foreground")}>
+                      Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
+                    </span>
+                  ) : (
+                    !r.isSupport && <span className="text-xs text-muted-foreground italic">No due date</span>
+                  )}
+                  {r.isSupport && r.requester && (
+                    <span className="text-xs text-muted-foreground">Req: {r.requester}</span>
+                  )}
+                </div>
+                {r.summary && (
+                  <p className="text-sm text-foreground/80 mt-1 line-clamp-2">{r.summary}</p>
+                )}
+                {!r.isSupport && r.next_action && (
+                  <p className="text-xs text-primary mt-1"><span className="font-semibold">Next:</span> {r.next_action}</p>
+                )}
               </div>
-            ) : (
-              <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
-                {g.rows.map((r) => (
-                  <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
-                    {r.isSupport
-                      ? <SupportStatusBadge status={r.currentStatus as SupportStatus} />
-                      : <StatusBadge status={r.currentStatus as Status} />}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center flex-wrap gap-2">
-                        <EntryTypeBadge type={r.isSupport ? "support" : "project"} />
-                        <span className="font-medium">{r.name}</span>
-                        {!r.isSupport && (r.category ? (
-                          <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
-                        ) : (
-                          <span className="text-xs rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground italic">No category</span>
-                        ))}
-                        {r.priority && (
-                          <span className={cn("text-xs rounded-full px-2 py-0.5 border", priorityClasses(r.priority))}>{r.priority}</span>
-                        )}
-                        {r.due_date ? (
-                          <span className={cn("text-xs", r.overdue ? "text-[var(--status-blocked)] font-medium" : "text-muted-foreground")}>
-                            Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
-                          </span>
-                        ) : (
-                          !r.isSupport && <span className="text-xs text-muted-foreground italic">No due date</span>
-                        )}
-                        {r.isSupport && r.requester && (
-                          <span className="text-xs text-muted-foreground">Req: {r.requester}</span>
-                        )}
+            </div>
+          );
+          return (
+            <section key={g.site}>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                {g.site}
+              </h2>
+              {g.rows.length === 0 ? (
+                <div className="rounded-md border border-border bg-card px-4 py-4 text-sm text-muted-foreground italic">
+                  No entries featured yet
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projectRows.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Projects</h3>
+                      <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
+                        {projectRows.map(renderRow)}
                       </div>
-                      {!r.isSupport && r.next_action && (
-                        <p className="text-xs text-primary mt-1"><span className="font-semibold">Next:</span> {r.next_action}</p>
-                      )}
-                      {r.summary && (
-                        <p className="text-sm text-foreground/80 mt-0.5 line-clamp-2">{r.summary}</p>
-                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        ))}
+                  )}
+                  {supportRows.length > 0 && (
+                    <div>
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Support</h3>
+                      <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
+                        {supportRows.map(renderRow)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </div>
   );
