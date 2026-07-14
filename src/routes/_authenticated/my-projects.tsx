@@ -15,7 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
 import { Plus, PencilLine } from "lucide-react";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/my-projects")({
   component: MyProjectsPage,
 });
 
-const PROJECT_SELECT = "id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester";
+const PROJECT_SELECT = "id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason";
 const UPDATE_SELECT = "id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id";
 
 function MyProjectsPage() {
@@ -148,7 +148,9 @@ function MyProjectsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <EntryTypeBadge type={isSupport ? "support" : "project"} />
                       <h3 className="font-medium truncate">{p.name}</h3>
-                      {isSupport
+                      {p.pending_approval
+                        ? <PendingApprovalBadge />
+                        : isSupport
                         ? <SupportStatusBadge status={shownStatus as SupportStatus} />
                         : <StatusBadge status={shownStatus as Status} />}
                       {p.priority === "High" && (
@@ -436,8 +438,34 @@ function LogUpdateDialog({
   }, [project, open]);
 
   const submit = async () => {
-    if (!user || !projectId || !note.trim() || !weekLabel) return;
+    if (!user || !projectId || !note.trim() || !weekLabel || !project) return;
     setSaving(true);
+
+    const wantsClose =
+      (isSupport && supportStatus === "Done") ||
+      (!isSupport && status === "Complete");
+
+    if (wantsClose && !project.pending_approval) {
+      // Route closure through admin approval. Do NOT flip status yet.
+      const { error: uErr } = await supabase.from("weekly_updates").insert({
+        project_id: projectId, author_id: user.id, week_label: weekLabel,
+        status: null, support_status: null,
+        note: `🔒 Closure requested: ${note.trim()}`, blocker: null,
+      });
+      if (uErr) { setSaving(false); return toast.error(uErr.message); }
+      const { error: pErr } = await supabase.from("projects").update({
+        pending_approval: true,
+        previous_status: project.status,
+        previous_support_status: project.support_status ?? null,
+        rejection_reason: null,
+      }).eq("id", projectId);
+      if (pErr) { setSaving(false); return toast.error(pErr.message); }
+      setSaving(false);
+      toast.success("Closure request sent to admin for approval");
+      onOpenChange(false);
+      onCreated();
+      return;
+    }
 
     if (isSupport) {
       const { error: uErr } = await supabase.from("weekly_updates").insert({

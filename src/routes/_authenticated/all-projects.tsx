@@ -13,10 +13,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Copy, Check, ArrowUpDown, Star, Pencil, Archive, ArchiveRestore, Trash2, Search, AlertCircle } from "lucide-react";
+import { Copy, Check, ArrowUpDown, Star, Pencil, Archive, ArchiveRestore, Trash2, Search, AlertCircle, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/all-projects")({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/all-projects")({
   component: AllProjectsPage,
 });
 
-type ViewMode = "active" | "completed" | "archived" | "all";
+type ViewMode = "active" | "pending" | "completed" | "archived" | "all";
 type SortMode = "risk" | "updated" | "priority" | "due";
 
 function AllProjectsPage() {
@@ -43,6 +43,8 @@ function AllProjectsPage() {
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
   const [deleteProject, setDeleteProject] = useState<ProjectRow | null>(null);
+  const [rejectProject, setRejectProject] = useState<ProjectRow | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
     if (!authLoading && !isAdmin) {
@@ -54,7 +56,7 @@ function AllProjectsPage() {
   const load = async () => {
     setLoading(true);
     const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester").order("created_at", { ascending: false }),
+      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason").order("created_at", { ascending: false }),
       supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, full_name"),
     ]);
@@ -113,7 +115,8 @@ function AllProjectsPage() {
       };
     });
 
-    if (viewMode === "active") out = out.filter((r) => !r.archived && !r.isComplete);
+    if (viewMode === "active") out = out.filter((r) => !r.archived && !r.isComplete && !r.pending_approval);
+    else if (viewMode === "pending") out = out.filter((r) => !r.archived && r.pending_approval);
     else if (viewMode === "completed") out = out.filter((r) => !r.archived && r.isComplete);
     else if (viewMode === "archived") out = out.filter((r) => r.archived);
 
@@ -187,6 +190,62 @@ function AllProjectsPage() {
     load();
   };
 
+  const approveClosure = async (r: ProjectRow) => {
+    const isSupport = r.entry_type === "support";
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) return toast.error("Not signed in");
+    const { error } = await supabase.from("projects").update({
+      pending_approval: false,
+      approved_at: new Date().toISOString(),
+      approved_by: uid,
+      rejection_reason: null,
+      ...(isSupport
+        ? { support_status: "Done" as const }
+        : { status: "Complete" as const }),
+    }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    const approverName = profiles[uid] ?? "admin";
+    await supabase.from("weekly_updates").insert({
+      project_id: r.id,
+      author_id: uid,
+      week_label: `approval-${new Date().toISOString().slice(0, 10)}`,
+      status: isSupport ? null : "Complete",
+      support_status: isSupport ? "Done" : null,
+      note: `✓ Closure approved by ${approverName}`,
+    });
+    toast.success(isSupport ? "Support item closed" : "Project completed");
+    load();
+  };
+
+  const rejectClosure = async () => {
+    if (!rejectProject) return;
+    const isSupport = rejectProject.entry_type === "support";
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData.user?.id;
+    if (!uid) return toast.error("Not signed in");
+    const approverName = profiles[uid] ?? "admin";
+    const reason = rejectReason.trim();
+    const { error } = await supabase.from("projects").update({
+      pending_approval: false,
+      rejection_reason: reason || "No reason given",
+    }).eq("id", rejectProject.id);
+    if (error) return toast.error(error.message);
+    await supabase.from("weekly_updates").insert({
+      project_id: rejectProject.id,
+      author_id: uid,
+      week_label: `rejection-${new Date().toISOString().slice(0, 10)}`,
+      status: null,
+      support_status: null,
+      note: `✗ Closure rejected by ${approverName}${reason ? `: ${reason}` : ""}`,
+    });
+    toast.success("Closure rejected");
+    setRejectProject(null);
+    setRejectReason("");
+    load();
+  };
+
+
   if (authLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return null;
 
@@ -211,6 +270,7 @@ function AllProjectsPage() {
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending approval</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="archived">Archived</SelectItem>
               <SelectItem value="all">All</SelectItem>
@@ -356,9 +416,13 @@ function AllProjectsPage() {
                   </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
                   <td className="px-3 py-2">
-                    {r.isSupport
-                      ? <SupportStatusBadge status={r.supportStatus} />
-                      : <StatusBadge status={r.projectStatus} />}
+                    {r.pending_approval ? (
+                      <PendingApprovalBadge />
+                    ) : r.isSupport ? (
+                      <SupportStatusBadge status={r.supportStatus} />
+                    ) : (
+                      <StatusBadge status={r.projectStatus} />
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {r.priority && (
@@ -393,6 +457,16 @@ function AllProjectsPage() {
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-0.5">
+                      {r.pending_approval && (
+                        <>
+                          <IconBtn title="Approve closure" onClick={() => approveClosure(r)}>
+                            <CheckCircle2 className="w-4 h-4 text-[var(--status-ontrack)]" />
+                          </IconBtn>
+                          <IconBtn title="Reject closure" onClick={() => setRejectProject(r)}>
+                            <XCircle className="w-4 h-4 text-[var(--status-blocked)]" />
+                          </IconBtn>
+                        </>
+                      )}
                       <IconBtn
                         title={r.featured ? "Un-feature from Executive Summary" : "Feature in Executive Summary"}
                         onClick={() => toggleFeatured(r)}
@@ -446,6 +520,25 @@ function AllProjectsPage() {
       />
 
       <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} profiles={profiles} />
+
+      <Dialog open={!!rejectProject} onOpenChange={(v) => { if (!v) { setRejectProject(null); setRejectReason(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject closure request</DialogTitle>
+            <DialogDescription>
+              "{rejectProject?.name}" will revert to its prior status. Add a short reason for the owner.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Reason (optional)</Label>
+            <Textarea rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g., Needs sustain check, Missing final numbers" />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setRejectProject(null); setRejectReason(""); }}>Cancel</Button>
+            <Button onClick={rejectClosure} className="bg-[var(--status-blocked)] hover:bg-[var(--status-blocked)]/90 text-white">Reject closure</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteProject} onOpenChange={(v) => !v && setDeleteProject(null)}>
         <AlertDialogContent>

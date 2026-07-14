@@ -1,7 +1,22 @@
 import { Badge } from "@/components/ui/badge";
 import { statusClasses, supportStatusClasses, type Status, type SupportStatus, type EntryType } from "@/lib/ci";
 import { cn } from "@/lib/utils";
-import { Wrench, TrendingUp } from "lucide-react";
+import { Wrench, TrendingUp, Clock } from "lucide-react";
+
+export function PendingApprovalBadge({ className }: { className?: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "border font-medium bg-[var(--status-atrisk)]/10 text-[var(--status-atrisk)] border-[var(--status-atrisk)]/40 gap-1",
+        className,
+      )}
+    >
+      <Clock className="w-3 h-3" />
+      Pending approval
+    </Badge>
+  );
+}
 
 export function StatusBadge({ status, className }: { status: Status; className?: string }) {
   return (

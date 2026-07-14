@@ -7,7 +7,7 @@ import {
   Scripts,
   Link,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -116,6 +116,22 @@ function RootComponent() {
 
 function AppShell({ children }: { children: ReactNode }) {
   const { user, profile, isAdmin, signOut } = useAuth();
+  const [pendingCount, setPendingCount] = useState(0);
+  useEffect(() => {
+    if (!isAdmin) { setPendingCount(0); return; }
+    let cancelled = false;
+    const refresh = async () => {
+      const { count } = await supabase
+        .from("projects")
+        .select("id", { count: "exact", head: true })
+        .eq("pending_approval", true)
+        .eq("archived", false);
+      if (!cancelled) setPendingCount(count ?? 0);
+    };
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [isAdmin]);
   return (
     <div className="min-h-screen flex flex-col">
       {user && (
@@ -127,7 +143,21 @@ function AppShell({ children }: { children: ReactNode }) {
               </Link>
               <nav className="flex items-center gap-1 text-sm">
                 <NavLink to="/my-projects">My Projects</NavLink>
-                {isAdmin && <NavLink to="/all-projects">All Projects</NavLink>}
+                {isAdmin && (
+                  <NavLink to="/all-projects">
+                    <span className="inline-flex items-center gap-1.5">
+                      All Projects
+                      {pendingCount > 0 && (
+                        <span
+                          className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold bg-[var(--status-atrisk)] text-white"
+                          title={`${pendingCount} closure${pendingCount === 1 ? "" : "s"} awaiting approval`}
+                        >
+                          {pendingCount}
+                        </span>
+                      )}
+                    </span>
+                  </NavLink>
+                )}
                 <NavLink to="/summary">Summary</NavLink>
                 <NavLink to="/executive-summary">Executive Summary</NavLink>
               </nav>

@@ -37,6 +37,8 @@ export type Database = {
       }
       projects: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           archived: boolean
           blocker: string | null
           category: Database["public"]["Enums"]["project_category"] | null
@@ -50,8 +52,14 @@ export type Database = {
           name: string
           next_action: string | null
           owner_id: string
+          pending_approval: boolean
+          previous_status: Database["public"]["Enums"]["project_status"] | null
+          previous_support_status:
+            | Database["public"]["Enums"]["support_status"]
+            | null
           priority: Database["public"]["Enums"]["project_priority"]
           problem_statement: string | null
+          rejection_reason: string | null
           requester: string | null
           site: Database["public"]["Enums"]["site_code"]
           start_date: string | null
@@ -59,6 +67,8 @@ export type Database = {
           support_status: Database["public"]["Enums"]["support_status"] | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           archived?: boolean
           blocker?: string | null
           category?: Database["public"]["Enums"]["project_category"] | null
@@ -72,8 +82,14 @@ export type Database = {
           name: string
           next_action?: string | null
           owner_id: string
+          pending_approval?: boolean
+          previous_status?: Database["public"]["Enums"]["project_status"] | null
+          previous_support_status?:
+            | Database["public"]["Enums"]["support_status"]
+            | null
           priority?: Database["public"]["Enums"]["project_priority"]
           problem_statement?: string | null
+          rejection_reason?: string | null
           requester?: string | null
           site: Database["public"]["Enums"]["site_code"]
           start_date?: string | null
@@ -81,6 +97,8 @@ export type Database = {
           support_status?: Database["public"]["Enums"]["support_status"] | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           archived?: boolean
           blocker?: string | null
           category?: Database["public"]["Enums"]["project_category"] | null
@@ -94,8 +112,14 @@ export type Database = {
           name?: string
           next_action?: string | null
           owner_id?: string
+          pending_approval?: boolean
+          previous_status?: Database["public"]["Enums"]["project_status"] | null
+          previous_support_status?:
+            | Database["public"]["Enums"]["support_status"]
+            | null
           priority?: Database["public"]["Enums"]["project_priority"]
           problem_statement?: string | null
+          rejection_reason?: string | null
           requester?: string | null
           site?: Database["public"]["Enums"]["site_code"]
           start_date?: string | null

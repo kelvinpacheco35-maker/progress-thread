@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
 import { formatDate, priorityClasses, isOverdue } from "@/lib/ci";
 import type { Status, SupportStatus, Priority, Category, EntryType } from "@/lib/ci";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,12 @@ export type ProjectRow = {
   entry_type?: EntryType;
   support_status?: SupportStatus | null;
   requester?: string | null;
+  pending_approval?: boolean;
+  previous_status?: Status | null;
+  previous_support_status?: SupportStatus | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejection_reason?: string | null;
 };
 
 export function ProjectHistoryDialog({
@@ -65,7 +71,9 @@ export function ProjectHistoryDialog({
           <DialogTitle className="flex flex-wrap items-center gap-2">
             {project.name}
             <EntryTypeBadge type={isSupport ? "support" : "project"} />
-            {isSupport ? (
+            {project.pending_approval ? (
+              <PendingApprovalBadge />
+            ) : isSupport ? (
               <SupportStatusBadge status={(project.support_status ?? "Open") as SupportStatus} />
             ) : (
               <StatusBadge status={project.status} />
@@ -117,6 +125,18 @@ export function ProjectHistoryDialog({
         )}
         {project.description && (
           <p className="text-sm text-muted-foreground border-l-2 border-border pl-3">{project.description}</p>
+        )}
+        {project.pending_approval && (
+          <div className="rounded-md border border-[var(--status-atrisk)]/40 bg-[var(--status-atrisk)]/10 px-3 py-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-atrisk)] mb-0.5">Closure pending admin approval</div>
+            <p className="text-muted-foreground">Waiting for an admin to approve or reject this closure request.</p>
+          </div>
+        )}
+        {!project.pending_approval && project.rejection_reason && (
+          <div className="rounded-md border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/5 px-3 py-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-blocked)] mb-0.5">Last closure rejected</div>
+            <p className="text-muted-foreground">{project.rejection_reason}</p>
+          </div>
         )}
         <div className="mt-2 border-t border-border pt-3">
           <h3 className="text-sm font-semibold text-foreground mb-3">
