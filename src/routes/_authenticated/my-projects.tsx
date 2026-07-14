@@ -27,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/my-projects")({
   component: MyProjectsPage,
 });
 
-const PROJECT_SELECT = "id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester";
+const PROJECT_SELECT = "id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason";
 const UPDATE_SELECT = "id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id";
 
 function MyProjectsPage() {
