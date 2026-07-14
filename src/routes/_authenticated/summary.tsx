@@ -22,7 +22,7 @@ type Row = {
   created_at: string;
 };
 
-type Proj = { id: string; name: string; site: string; status: Status; support_status: SupportStatus | null; entry_type: EntryType; created_at: string };
+type Proj = { id: string; name: string; site: string; status: Status; support_status: SupportStatus | null; entry_type: EntryType; created_at: string; archived?: boolean; pending_approval?: boolean };
 
 function priorWeekLabel(): string {
   const d = new Date();
