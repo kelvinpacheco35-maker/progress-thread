@@ -34,6 +34,9 @@
   --color-status-blocked: var(--status-blocked);
   --color-status-complete: var(--status-complete);
   --color-status-hold: var(--status-hold);
+  --color-support-open: var(--support-open);
+  --color-support-inprogress: var(--support-inprogress);
+  --color-support-done: var(--support-done);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
