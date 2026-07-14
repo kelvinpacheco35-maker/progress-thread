@@ -103,8 +103,8 @@ function MyProjectsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} />
-          <LogUpdateDialog projects={projects} onCreated={load} />
+          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} fixedType="project" />
+          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} fixedType="support" />
         </div>
       </div>
 
