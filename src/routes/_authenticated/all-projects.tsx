@@ -521,6 +521,25 @@ function AllProjectsPage() {
 
       <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} profiles={profiles} />
 
+      <Dialog open={!!rejectProject} onOpenChange={(v) => { if (!v) { setRejectProject(null); setRejectReason(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject closure request</DialogTitle>
+            <DialogDescription>
+              "{rejectProject?.name}" will revert to its prior status. Add a short reason for the owner.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <Label>Reason (optional)</Label>
+            <Textarea rows={3} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="e.g., Needs sustain check, Missing final numbers" />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setRejectProject(null); setRejectReason(""); }}>Cancel</Button>
+            <Button onClick={rejectClosure} className="bg-[var(--status-blocked)] hover:bg-[var(--status-blocked)]/90 text-white">Reject closure</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={!!deleteProject} onOpenChange={(v) => !v && setDeleteProject(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
