@@ -602,6 +602,24 @@ function EditProjectDialog({
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5"><Label>{isSupport ? "Title" : "Name"}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          {isAdmin && (
+            <div className="space-y-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+              <Label className="text-primary">Owner (admin)</Label>
+              <Select value={ownerId} onValueChange={setOwnerId}>
+                <SelectTrigger><SelectValue placeholder="Select owner" /></SelectTrigger>
+                <SelectContent>
+                  {ownerOptions.map(([id, fullName]) => (
+                    <SelectItem key={id} value={id}>{fullName}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {project && ownerId !== project.owner_id && (
+                <p className="text-xs text-primary">
+                  Reassignment will be logged in the entry's history.
+                </p>
+              )}
+            </div>
+          )}
           {isSupport ? (
             <>
               <div className="grid grid-cols-2 gap-3">
