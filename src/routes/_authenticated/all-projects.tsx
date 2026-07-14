@@ -457,6 +457,16 @@ function AllProjectsPage() {
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-0.5">
+                      {r.pending_approval && (
+                        <>
+                          <IconBtn title="Approve closure" onClick={() => approveClosure(r)}>
+                            <CheckCircle2 className="w-4 h-4 text-[var(--status-ontrack)]" />
+                          </IconBtn>
+                          <IconBtn title="Reject closure" onClick={() => setRejectProject(r)}>
+                            <XCircle className="w-4 h-4 text-[var(--status-blocked)]" />
+                          </IconBtn>
+                        </>
+                      )}
                       <IconBtn
                         title={r.featured ? "Un-feature from Executive Summary" : "Feature in Executive Summary"}
                         onClick={() => toggleFeatured(r)}
