@@ -44,6 +44,7 @@ export type Database = {
           created_at: string
           description: string | null
           due_date: string | null
+          entry_type: Database["public"]["Enums"]["entry_type"]
           featured: boolean
           id: string
           name: string
@@ -51,9 +52,11 @@ export type Database = {
           owner_id: string
           priority: Database["public"]["Enums"]["project_priority"]
           problem_statement: string | null
+          requester: string | null
           site: Database["public"]["Enums"]["site_code"]
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
+          support_status: Database["public"]["Enums"]["support_status"] | null
         }
         Insert: {
           archived?: boolean
@@ -63,6 +66,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          entry_type?: Database["public"]["Enums"]["entry_type"]
           featured?: boolean
           id?: string
           name: string
@@ -70,9 +74,11 @@ export type Database = {
           owner_id: string
           priority?: Database["public"]["Enums"]["project_priority"]
           problem_statement?: string | null
+          requester?: string | null
           site: Database["public"]["Enums"]["site_code"]
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          support_status?: Database["public"]["Enums"]["support_status"] | null
         }
         Update: {
           archived?: boolean
@@ -82,6 +88,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           due_date?: string | null
+          entry_type?: Database["public"]["Enums"]["entry_type"]
           featured?: boolean
           id?: string
           name?: string
@@ -89,9 +96,11 @@ export type Database = {
           owner_id?: string
           priority?: Database["public"]["Enums"]["project_priority"]
           problem_statement?: string | null
+          requester?: string | null
           site?: Database["public"]["Enums"]["site_code"]
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          support_status?: Database["public"]["Enums"]["support_status"] | null
         }
         Relationships: []
       }
@@ -124,7 +133,8 @@ export type Database = {
           reviewed: boolean
           reviewed_at: string | null
           reviewed_by: string | null
-          status: Database["public"]["Enums"]["project_status"]
+          status: Database["public"]["Enums"]["project_status"] | null
+          support_status: Database["public"]["Enums"]["support_status"] | null
           week_label: string
         }
         Insert: {
@@ -137,7 +147,8 @@ export type Database = {
           reviewed?: boolean
           reviewed_at?: string | null
           reviewed_by?: string | null
-          status: Database["public"]["Enums"]["project_status"]
+          status?: Database["public"]["Enums"]["project_status"] | null
+          support_status?: Database["public"]["Enums"]["support_status"] | null
           week_label: string
         }
         Update: {
@@ -150,7 +161,8 @@ export type Database = {
           reviewed?: boolean
           reviewed_at?: string | null
           reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["project_status"]
+          status?: Database["public"]["Enums"]["project_status"] | null
+          support_status?: Database["public"]["Enums"]["support_status"] | null
           week_label?: string
         }
         Relationships: [
@@ -178,6 +190,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "contributor"
+      entry_type: "project" | "support"
       project_category:
         | "Efficiency"
         | "Safety"
@@ -199,6 +212,7 @@ export type Database = {
         | "Alexandria"
         | "3rd Ave"
         | "EPIC"
+      support_status: "Open" | "In Progress" | "Done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -327,6 +341,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "contributor"],
+      entry_type: ["project", "support"],
       project_category: [
         "Efficiency",
         "Safety",
@@ -345,6 +360,7 @@ export const Constants = {
         "3rd Ave",
         "EPIC",
       ],
+      support_status: ["Open", "In Progress", "Done"],
     },
   },
 } as const
