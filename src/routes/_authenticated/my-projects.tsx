@@ -148,7 +148,9 @@ function MyProjectsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <EntryTypeBadge type={isSupport ? "support" : "project"} />
                       <h3 className="font-medium truncate">{p.name}</h3>
-                      {isSupport
+                      {p.pending_approval
+                        ? <PendingApprovalBadge />
+                        : isSupport
                         ? <SupportStatusBadge status={shownStatus as SupportStatus} />
                         : <StatusBadge status={shownStatus as Status} />}
                       {p.priority === "High" && (
