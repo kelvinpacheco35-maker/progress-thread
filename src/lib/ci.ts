@@ -51,10 +51,25 @@ export function priorityRank(p: Priority): number {
   return p === "High" ? 0 : p === "Medium" ? 1 : 2;
 }
 
-export function isOverdue(dueDate: string | null | undefined, status: Status): boolean {
-  if (!dueDate || status === "Complete") return false;
+export function isOverdue(dueDate: string | null | undefined, status: Status | SupportStatus): boolean {
+  if (!dueDate || status === "Complete" || status === "Done") return false;
   const d = new Date(dueDate + "T23:59:59");
   return d.getTime() < Date.now();
+}
+
+export function supportStatusClasses(s: SupportStatus): string {
+  switch (s) {
+    case "Open":
+      return "bg-[var(--support-open)]/10 text-[var(--support-open)] border-[var(--support-open)]/30";
+    case "In Progress":
+      return "bg-[var(--support-inprogress)]/10 text-[var(--support-inprogress)] border-[var(--support-inprogress)]/30";
+    case "Done":
+      return "bg-[var(--support-done)]/10 text-[var(--support-done)] border-[var(--support-done)]/30";
+  }
+}
+
+export function supportStatusRank(s: SupportStatus): number {
+  return s === "Open" ? 0 : s === "In Progress" ? 1 : 2;
 }
 
 export function statusClasses(status: Status): string {
