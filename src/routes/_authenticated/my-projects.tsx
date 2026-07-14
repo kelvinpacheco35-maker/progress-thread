@@ -232,7 +232,6 @@ function NewEntryDialog({ onCreated, defaultSite, fixedType }: { onCreated: () =
   const [requester, setRequester] = useState("");
 
   const reset = () => {
-    setEntryType("project");
     setName(""); setDescription(""); setDueDate("");
     setPriority("Medium");
     setStatus("On Track"); setBlocker(""); setNextAction(""); setCategory("");
