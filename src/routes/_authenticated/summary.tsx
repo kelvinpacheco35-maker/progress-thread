@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status, type SupportStatus, type EntryType } from "@/lib/ci";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/status-badge";
 
 export const Route = createFileRoute("/_authenticated/summary")({
