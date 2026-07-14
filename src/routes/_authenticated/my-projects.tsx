@@ -438,8 +438,34 @@ function LogUpdateDialog({
   }, [project, open]);
 
   const submit = async () => {
-    if (!user || !projectId || !note.trim() || !weekLabel) return;
+    if (!user || !projectId || !note.trim() || !weekLabel || !project) return;
     setSaving(true);
+
+    const wantsClose =
+      (isSupport && supportStatus === "Done") ||
+      (!isSupport && status === "Complete");
+
+    if (wantsClose && !project.pending_approval) {
+      // Route closure through admin approval. Do NOT flip status yet.
+      const { error: uErr } = await supabase.from("weekly_updates").insert({
+        project_id: projectId, author_id: user.id, week_label: weekLabel,
+        status: null, support_status: null,
+        note: `🔒 Closure requested: ${note.trim()}`, blocker: null,
+      });
+      if (uErr) { setSaving(false); return toast.error(uErr.message); }
+      const { error: pErr } = await supabase.from("projects").update({
+        pending_approval: true,
+        previous_status: project.status,
+        previous_support_status: project.support_status ?? null,
+        rejection_reason: null,
+      }).eq("id", projectId);
+      if (pErr) { setSaving(false); return toast.error(pErr.message); }
+      setSaving(false);
+      toast.success("Closure request sent to admin for approval");
+      onOpenChange(false);
+      onCreated();
+      return;
+    }
 
     if (isSupport) {
       const { error: uErr } = await supabase.from("weekly_updates").insert({
