@@ -445,7 +445,7 @@ function AllProjectsPage() {
         ) : []}
       />
 
-      <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} />
+      <EditProjectDialog project={editProject} onOpenChange={(v) => !v && setEditProject(null)} onSaved={load} profiles={profiles} />
 
       <AlertDialog open={!!deleteProject} onOpenChange={(v) => !v && setDeleteProject(null)}>
         <AlertDialogContent>
