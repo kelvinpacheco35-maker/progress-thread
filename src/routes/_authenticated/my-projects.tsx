@@ -171,6 +171,14 @@ function MyProjectsPage() {
                       <p className="text-sm mt-1.5 line-clamp-1 text-foreground/80">{latest.note}</p>
                     )}
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setLogUpdateFor(p); }}
+                  >
+                    <PencilLine className="w-3.5 h-3.5 mr-1" /> Log update
+                  </Button>
                 </CardContent>
               </Card>
             );
