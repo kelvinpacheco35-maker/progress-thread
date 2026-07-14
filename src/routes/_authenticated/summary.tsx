@@ -45,7 +45,7 @@ function SummaryPage() {
   useEffect(() => {
     (async () => {
       const [{ data: p }, { data: u }] = await Promise.all([
-        supabase.from("projects").select("id, name, site, status, support_status, entry_type, created_at"),
+        supabase.from("projects").select("id, name, site, status, support_status, entry_type, created_at, archived, pending_approval"),
         supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, created_at").order("created_at", { ascending: false }),
       ]);
       setProjects((p ?? []) as unknown as Proj[]);
