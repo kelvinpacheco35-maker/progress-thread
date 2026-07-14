@@ -214,6 +214,7 @@ function AllProjectsPage() {
             <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending approval</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="archived">Archived</SelectItem>
               <SelectItem value="all">All</SelectItem>
