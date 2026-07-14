@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SITES, formatDate, isOverdue, statusRank, priorityClasses, type Status, type Category, type Priority } from "@/lib/ci";
-import { StatusBadge } from "@/components/status-badge";
+import { SITES, formatDate, isOverdue, statusRank, supportStatusRank, priorityClasses, type Status, type SupportStatus, type Category, type Priority, type EntryType } from "@/lib/ci";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -18,21 +18,27 @@ type P = {
   name: string;
   site: string;
   status: Status;
+  support_status: SupportStatus | null;
+  entry_type: EntryType;
   featured: boolean;
   due_date: string | null;
   category: Category | null;
   priority: Priority | null;
   next_action: string | null;
+  requester: string | null;
 };
-type U = { project_id: string; status: Status; note: string; created_at: string };
+type U = { project_id: string; status: Status | null; support_status: SupportStatus | null; note: string; created_at: string };
 
-function statusAccent(s: Status): string {
+function statusAccent(s: Status | SupportStatus): string {
   switch (s) {
     case "On Track": return "border-l-[var(--status-ontrack)]";
     case "At Risk": return "border-l-[var(--status-atrisk)]";
     case "Blocked": return "border-l-[var(--status-blocked)]";
     case "Complete": return "border-l-[var(--status-complete)]";
     case "On Hold": return "border-l-[var(--status-hold)]";
+    case "Open": return "border-l-[var(--support-open)]";
+    case "In Progress": return "border-l-[var(--support-inprogress)]";
+    case "Done": return "border-l-[var(--support-done)]";
   }
 }
 
@@ -46,15 +52,15 @@ function ExecutiveSummaryPage() {
       const [{ data: p }, { data: u }] = await Promise.all([
         supabase
           .from("projects")
-          .select("id, name, site, status, featured, due_date, category, priority, next_action")
+          .select("id, name, site, status, support_status, entry_type, featured, due_date, category, priority, next_action, requester")
           .eq("featured", true),
         supabase
           .from("weekly_updates")
-          .select("project_id, status, note, created_at")
+          .select("project_id, status, support_status, note, created_at")
           .order("created_at", { ascending: false }),
       ]);
-      setProjects((p ?? []) as P[]);
-      setUpdates((u ?? []) as U[]);
+      setProjects((p ?? []) as unknown as P[]);
+      setUpdates((u ?? []) as unknown as U[]);
       setLoading(false);
     })();
   }, []);
@@ -73,18 +79,29 @@ function ExecutiveSummaryPage() {
         .map((p) => {
           const l = latest.get(p.id);
           const summary = (l?.note ?? "").split("\n").slice(0, 2).join(" ").trim();
-          const currentStatus = (l?.status ?? p.status) as Status;
-          return { ...p, currentStatus, summary, overdue: isOverdue(p.due_date, currentStatus) };
+          const isSupport = p.entry_type === "support";
+          const currentStatus = isSupport
+            ? ((l?.support_status ?? p.support_status ?? "Open") as SupportStatus)
+            : ((l?.status ?? p.status) as Status);
+          return { ...p, isSupport, currentStatus, summary, overdue: isOverdue(p.due_date, currentStatus) };
         })
-        .sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus)),
+        .sort((a, b) => {
+          const ar = a.isSupport ? supportStatusRank(a.currentStatus as SupportStatus) + 10 : statusRank(a.currentStatus as Status);
+          const br = b.isSupport ? supportStatusRank(b.currentStatus as SupportStatus) + 10 : statusRank(b.currentStatus as Status);
+          return ar - br;
+        }),
     }));
   }, [projects, latest]);
 
   const totals = useMemo(() => {
     const all = bySite.flatMap((g) => g.rows);
     const counts: Record<Status, number> = { "On Track": 0, "At Risk": 0, "Blocked": 0, "Complete": 0, "On Hold": 0 };
-    for (const r of all) counts[r.currentStatus] += 1;
-    return { total: all.length, counts };
+    let support = 0;
+    for (const r of all) {
+      if (r.isSupport) support += 1;
+      else counts[r.currentStatus as Status] += 1;
+    }
+    return { total: all.length, counts, support };
   }, [bySite]);
 
   const copyAll = async () => {
@@ -96,7 +113,10 @@ function ExecutiveSummaryPage() {
           `${g.site}\n` +
           g.rows
             .map((r) => {
-              const meta = [r.category, r.due_date ? `due ${formatDate(r.due_date)}${r.overdue ? " OVERDUE" : ""}` : null].filter(Boolean).join(" · ");
+              const meta = [
+                r.isSupport ? "SUPPORT" : r.category,
+                r.due_date ? `due ${formatDate(r.due_date)}${r.overdue ? " OVERDUE" : ""}` : null,
+              ].filter(Boolean).join(" · ");
               return `  [${r.currentStatus}] ${r.name}${meta ? ` (${meta})` : ""}${r.summary ? ` — ${r.summary}` : ""}`;
             })
             .join("\n"),
@@ -114,7 +134,7 @@ function ExecutiveSummaryPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Executive Summary</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Featured projects only · up to 5 per site.
+            Featured entries only · up to 5 per site (projects + support combined).
           </p>
         </div>
         <Button onClick={copyAll} variant="outline" size="sm">
@@ -122,7 +142,6 @@ function ExecutiveSummaryPage() {
         </Button>
       </div>
 
-      {/* Stat strip */}
       <div className="rounded-md border border-border bg-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-semibold">{totals.total}</span>
@@ -131,6 +150,7 @@ function ExecutiveSummaryPage() {
         <StatCount label="On Track" count={totals.counts["On Track"]} colorVar="--status-ontrack" />
         <StatCount label="At Risk" count={totals.counts["At Risk"]} colorVar="--status-atrisk" />
         <StatCount label="Blocked" count={totals.counts["Blocked"]} colorVar="--status-blocked" />
+        <StatCount label="Support" count={totals.support} colorVar="--support-inprogress" />
       </div>
 
       <div className="space-y-6">
@@ -141,21 +161,24 @@ function ExecutiveSummaryPage() {
             </h2>
             {g.rows.length === 0 ? (
               <div className="rounded-md border border-border bg-card px-4 py-4 text-sm text-muted-foreground italic">
-                No projects featured yet
+                No entries featured yet
               </div>
             ) : (
               <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
                 {g.rows.map((r) => (
                   <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
-                    <StatusBadge status={r.currentStatus} />
+                    {r.isSupport
+                      ? <SupportStatusBadge status={r.currentStatus as SupportStatus} />
+                      : <StatusBadge status={r.currentStatus as Status} />}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center flex-wrap gap-2">
+                        <EntryTypeBadge type={r.isSupport ? "support" : "project"} />
                         <span className="font-medium">{r.name}</span>
-                        {r.category ? (
+                        {!r.isSupport && (r.category ? (
                           <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
                         ) : (
                           <span className="text-xs rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground italic">No category</span>
-                        )}
+                        ))}
                         {r.priority && (
                           <span className={cn("text-xs rounded-full px-2 py-0.5 border", priorityClasses(r.priority))}>{r.priority}</span>
                         )}
@@ -164,10 +187,13 @@ function ExecutiveSummaryPage() {
                             Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
                           </span>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">No due date</span>
+                          !r.isSupport && <span className="text-xs text-muted-foreground italic">No due date</span>
+                        )}
+                        {r.isSupport && r.requester && (
+                          <span className="text-xs text-muted-foreground">Req: {r.requester}</span>
                         )}
                       </div>
-                      {r.next_action && (
+                      {!r.isSupport && r.next_action && (
                         <p className="text-xs text-primary mt-1"><span className="font-semibold">Next:</span> {r.next_action}</p>
                       )}
                       {r.summary && (
