@@ -165,48 +165,51 @@ function ExecutiveSummaryPage() {
         {bySite.map((g) => {
           const projectRows = g.rows.filter((r) => !r.isSupport);
           const supportRows = g.rows.filter((r) => r.isSupport);
-          const renderRow = (r: typeof g.rows[number]) => (
-            <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
-              {r.isSupport
-                ? <SupportStatusBadge status={r.currentStatus as SupportStatus} />
-                : <StatusBadge status={r.currentStatus as Status} />}
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center flex-wrap gap-2">
-                  <EntryTypeBadge type={r.isSupport ? "support" : "project"} />
-                  <span className="font-medium">{r.name}</span>
+          const renderRow = (r: typeof g.rows[number]) => {
+            const meta: string[] = [`Owner: ${profiles[r.owner_id] ?? "—"}`];
+            if (!r.isSupport && r.category) meta.push(r.category);
+            const dueText = r.due_date
+              ? `Due ${formatDate(r.due_date)}${r.overdue ? " · Overdue" : ""}`
+              : null;
+            if (r.isSupport && r.requester) meta.push(`Req: ${r.requester}`);
+            return (
+              <div key={r.id} className={cn("px-4 py-3 flex items-start gap-3 border-l-4", statusAccent(r.currentStatus))}>
+                {r.isSupport
+                  ? <SupportStatusBadge status={r.currentStatus as SupportStatus} />
+                  : <StatusBadge status={r.currentStatus as Status} />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center flex-wrap gap-2">
+                    {r.priority === "High" && (
+                      <span className={cn("text-xs rounded-full px-2 py-0.5 border font-medium", priorityClasses("High"))}>
+                        High priority
+                      </span>
+                    )}
+                    <span className="font-medium">{r.name}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {meta.join(" · ")}
+                    {dueText && (
+                      <>
+                        {" · "}
+                        <span className={cn(r.overdue && "text-[var(--status-blocked)] font-medium")}>
+                          {dueText}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                  {r.summary && (
+                    <p className="text-sm text-foreground mt-1.5 line-clamp-2">{r.summary}</p>
+                  )}
+                  {!r.isSupport && r.next_action && (
+                    <p className="text-xs mt-1.5 pl-2 border-l-2 border-primary/40">
+                      <span className="text-muted-foreground">Next: </span>
+                      <span className="text-foreground">{r.next_action}</span>
+                    </p>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Owner: {profiles[r.owner_id] ?? "—"}
-                </p>
-                <div className="flex items-center flex-wrap gap-2 mt-1">
-                  {!r.isSupport && (r.category ? (
-                    <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
-                  ) : (
-                    <span className="text-xs rounded-full px-2 py-0.5 border border-dashed border-border text-muted-foreground italic">No category</span>
-                  ))}
-                  {r.priority && (
-                    <span className={cn("text-xs rounded-full px-2 py-0.5 border", priorityClasses(r.priority))}>{r.priority}</span>
-                  )}
-                  {r.due_date ? (
-                    <span className={cn("text-xs", r.overdue ? "text-[var(--status-blocked)] font-medium" : "text-muted-foreground")}>
-                      Due {formatDate(r.due_date)}{r.overdue && " · Overdue"}
-                    </span>
-                  ) : (
-                    !r.isSupport && <span className="text-xs text-muted-foreground italic">No due date</span>
-                  )}
-                  {r.isSupport && r.requester && (
-                    <span className="text-xs text-muted-foreground">Req: {r.requester}</span>
-                  )}
-                </div>
-                {r.summary && (
-                  <p className="text-sm text-foreground/80 mt-1 line-clamp-2">{r.summary}</p>
-                )}
-                {!r.isSupport && r.next_action && (
-                  <p className="text-xs text-primary mt-1"><span className="font-semibold">Next:</span> {r.next_action}</p>
-                )}
               </div>
-            </div>
-          );
+            );
+          };
           return (
             <section key={g.site}>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
