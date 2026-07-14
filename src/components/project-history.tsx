@@ -123,8 +123,17 @@ export function ProjectHistoryDialog({
             <p className="text-sm">{project.next_action}</p>
           </div>
         )}
-        {project.description && (
-          <p className="text-sm text-muted-foreground border-l-2 border-border pl-3">{project.description}</p>
+        {project.pending_approval && (
+          <div className="rounded-md border border-[var(--status-atrisk)]/40 bg-[var(--status-atrisk)]/10 px-3 py-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-atrisk)] mb-0.5">Closure pending admin approval</div>
+            <p className="text-muted-foreground">Waiting for an admin to approve or reject this closure request.</p>
+          </div>
+        )}
+        {!project.pending_approval && project.rejection_reason && (
+          <div className="rounded-md border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/5 px-3 py-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-blocked)] mb-0.5">Last closure rejected</div>
+            <p className="text-muted-foreground">{project.rejection_reason}</p>
+          </div>
         )}
         <div className="mt-2 border-t border-border pt-3">
           <h3 className="text-sm font-semibold text-foreground mb-3">
