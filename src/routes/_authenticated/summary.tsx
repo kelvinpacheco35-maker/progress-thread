@@ -276,3 +276,96 @@ function DeltaChip({ delta }: { delta: number }) {
     </span>
   );
 }
+
+function CompletionChart({
+  projects, updates, mode,
+}: {
+  projects: Proj[];
+  updates: Row[];
+  mode: "weekly" | "monthly";
+}) {
+  const [siteFilter, setSiteFilter] = useState<string>("all");
+  const [scope, setScope] = useState<"all" | "project" | "support">("all");
+
+  const stats = useMemo(() => {
+    const latestP = new Map<string, Status>();
+    const latestS = new Map<string, SupportStatus>();
+    for (const u of updates) {
+      if (u.status && !latestP.has(u.project_id)) latestP.set(u.project_id, u.status);
+      if (u.support_status && !latestS.has(u.project_id)) latestS.set(u.project_id, u.support_status);
+    }
+    let pool = projects.filter((p) => !p.archived);
+    if (siteFilter !== "all") pool = pool.filter((p) => p.site === siteFilter);
+    if (scope === "project") pool = pool.filter((p) => (p.entry_type ?? "project") === "project");
+    else if (scope === "support") pool = pool.filter((p) => p.entry_type === "support");
+
+    let complete = 0, active = 0, pending = 0;
+    for (const p of pool) {
+      if (p.pending_approval) { pending += 1; continue; }
+      const isSupport = p.entry_type === "support";
+      if (isSupport) {
+        const s = latestS.get(p.id) ?? p.support_status ?? "Open";
+        if (s === "Done") complete += 1; else active += 1;
+      } else {
+        const s = latestP.get(p.id) ?? p.status;
+        if (s === "Complete") complete += 1;
+        else if (s === "On Hold") { /* neither */ }
+        else active += 1;
+      }
+    }
+    const total = complete + active + pending;
+    const pct = total === 0 ? 0 : Math.round((complete / total) * 100);
+    return { complete, active, pending, total, pct };
+  }, [projects, updates, siteFilter, scope]);
+
+  const pct = (n: number) => stats.total === 0 ? "0%" : `${(n / stats.total) * 100}%`;
+
+  return (
+    <div className="rounded-md border border-border bg-card p-4 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold">Completion vs Active</h2>
+          <p className="text-xs text-muted-foreground">{mode === "weekly" ? "Weekly" : "Monthly"} view · combined entries</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Tabs value={scope} onValueChange={(v) => setScope(v as typeof scope)}>
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="project">Projects</TabsTrigger>
+              <TabsTrigger value="support">Support</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Select value={siteFilter} onValueChange={setSiteFilter}>
+            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All sites</SelectItem>
+              {SITES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div>
+        <div className="flex items-baseline justify-between mb-1.5">
+          <span className="text-2xl font-semibold tabular-nums">{stats.pct}%</span>
+          <span className="text-sm text-muted-foreground">
+            {stats.complete} of {stats.total} complete
+            {stats.pending > 0 && <> · <span className="text-[var(--status-atrisk)]">{stats.pending} pending</span></>}
+          </span>
+        </div>
+        <div className="h-3 rounded-full bg-muted overflow-hidden flex">
+          {stats.complete > 0 && <div style={{ width: pct(stats.complete), backgroundColor: "var(--status-complete)" }} title={`Complete: ${stats.complete}`} />}
+          {stats.active > 0 && <div style={{ width: pct(stats.active), backgroundColor: "var(--status-ontrack)" }} title={`Active: ${stats.active}`} />}
+          {stats.pending > 0 && <div style={{ width: pct(stats.pending), backgroundColor: "var(--status-atrisk)" }} title={`Pending: ${stats.pending}`} />}
+        </div>
+        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--status-complete)" }} /> Complete ({stats.complete})</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--status-ontrack)" }} /> Active ({stats.active})</span>
+          {stats.pending > 0 && (
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--status-atrisk)" }} /> Pending approval ({stats.pending})</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
