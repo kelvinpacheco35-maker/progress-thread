@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITES, formatDate, isOverdue, statusRank, supportStatusRank, priorityClasses, type Status, type SupportStatus, type Category, type Priority, type EntryType } from "@/lib/ci";
-import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
