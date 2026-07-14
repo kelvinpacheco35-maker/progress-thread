@@ -118,10 +118,15 @@ export function ProjectHistoryDialog({
         {project.description && (
           <p className="text-sm text-muted-foreground border-l-2 border-border pl-3">{project.description}</p>
         )}
-        <div className="mt-2">
-          <h3 className="text-sm font-semibold text-foreground mb-3">{isSupport ? "Update history" : "Weekly history"}</h3>
+        <div className="mt-2 border-t border-border pt-3">
+          <h3 className="text-sm font-semibold text-foreground mb-3">
+            {isSupport ? "Update history" : "Weekly history"}
+            <span className="ml-2 text-xs font-normal text-muted-foreground">({updates.length})</span>
+          </h3>
           {updates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No updates logged yet.</p>
+            <div className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-4 text-center text-sm text-muted-foreground">
+              No updates logged yet. Use <span className="font-medium text-foreground">Log update</span> to add the first entry.
+            </div>
           ) : (
             <ol className="space-y-3">
               {updates.map((u) => (
