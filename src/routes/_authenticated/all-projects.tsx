@@ -115,7 +115,8 @@ function AllProjectsPage() {
       };
     });
 
-    if (viewMode === "active") out = out.filter((r) => !r.archived && !r.isComplete);
+    if (viewMode === "active") out = out.filter((r) => !r.archived && !r.isComplete && !r.pending_approval);
+    else if (viewMode === "pending") out = out.filter((r) => !r.archived && r.pending_approval);
     else if (viewMode === "completed") out = out.filter((r) => !r.archived && r.isComplete);
     else if (viewMode === "archived") out = out.filter((r) => r.archived);
 
