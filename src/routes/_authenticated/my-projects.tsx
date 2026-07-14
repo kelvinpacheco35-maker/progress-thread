@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import {
   SITES, STATUSES, PRIORITIES, CATEGORIES, SUPPORT_STATUSES,
-  currentWeekLabel, formatDate, statusRank, supportStatusRank,
+  currentWeekLabel, formatDate,
   type Status, type SupportStatus, type Site, type Priority, type Category, type EntryType,
 } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, PencilLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { priorityClasses } from "@/lib/ci";
 
@@ -38,6 +38,7 @@ function MyProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | EntryType>("all");
+  const [logUpdateFor, setLogUpdateFor] = useState<ProjectRow | null>(null);
 
   const currentWeek = currentWeekLabel();
 
@@ -102,8 +103,8 @@ function MyProjectsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} />
-          <LogUpdateDialog projects={projects} onCreated={load} />
+          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} fixedType="project" />
+          <NewEntryDialog onCreated={load} defaultSite={profile?.site ?? SITES[0]} fixedType="support" />
         </div>
       </div>
 
@@ -170,6 +171,14 @@ function MyProjectsPage() {
                       <p className="text-sm mt-1.5 line-clamp-1 text-foreground/80">{latest.note}</p>
                     )}
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setLogUpdateFor(p); }}
+                  >
+                    <PencilLine className="w-3.5 h-3.5 mr-1" /> Log update
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -185,14 +194,21 @@ function MyProjectsPage() {
           (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         ) : []}
       />
+
+      <LogUpdateDialog
+        open={!!logUpdateFor}
+        onOpenChange={(v) => !v && setLogUpdateFor(null)}
+        project={logUpdateFor}
+        onCreated={load}
+      />
     </div>
   );
 }
 
-function NewEntryDialog({ onCreated, defaultSite }: { onCreated: () => void; defaultSite: Site }) {
+function NewEntryDialog({ onCreated, defaultSite, fixedType }: { onCreated: () => void; defaultSite: Site; fixedType: EntryType }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [entryType, setEntryType] = useState<EntryType>("project");
+  const entryType: EntryType = fixedType;
 
   // Shared
   const [name, setName] = useState("");
@@ -216,7 +232,6 @@ function NewEntryDialog({ onCreated, defaultSite }: { onCreated: () => void; def
   const [requester, setRequester] = useState("");
 
   const reset = () => {
-    setEntryType("project");
     setName(""); setDescription(""); setDueDate("");
     setPriority("Medium");
     setStatus("On Track"); setBlocker(""); setNextAction(""); setCategory("");
@@ -276,20 +291,14 @@ function NewEntryDialog({ onCreated, defaultSite }: { onCreated: () => void; def
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger asChild>
-        <Button><Plus className="w-4 h-4 mr-1" /> New entry</Button>
+        <Button variant={fixedType === "project" ? "default" : "secondary"}>
+          <Plus className="w-4 h-4 mr-1" /> {fixedType === "project" ? "New project" : "New support"}
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New entry</DialogTitle></DialogHeader>
-
-        <div className="space-y-1.5">
-          <Label>Type</Label>
-          <Tabs value={entryType} onValueChange={(v) => setEntryType(v as EntryType)}>
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="project">CI Project</TabsTrigger>
-              <TabsTrigger value="support">Support</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <DialogHeader>
+          <DialogTitle>{fixedType === "project" ? "New CI project" : "New support item"}</DialogTitle>
+        </DialogHeader>
 
         <div className="space-y-3">
           <div className="space-y-1.5">
@@ -392,10 +401,15 @@ function NewEntryDialog({ onCreated, defaultSite }: { onCreated: () => void; def
   );
 }
 
-function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCreated: () => void }) {
+function LogUpdateDialog({
+  open, onOpenChange, project, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  project: ProjectRow | null;
+  onCreated: () => void;
+}) {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [projectId, setProjectId] = useState<string>("");
   const [status, setStatus] = useState<Status>("On Track");
   const [supportStatus, setSupportStatus] = useState<SupportStatus>("Open");
   const [note, setNote] = useState("");
@@ -405,29 +419,21 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
   const [nextAction, setNextAction] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
-  const selectedProject = useMemo(() => projects.find((p) => p.id === projectId) ?? null, [projects, projectId]);
-  const isSupport = selectedProject?.entry_type === "support";
-
-  const sorted = useMemo(() => {
-    return [...projects].sort((a, b) => {
-      const at = (a.entry_type ?? "project");
-      const bt = (b.entry_type ?? "project");
-      if (at !== bt) return at === "project" ? -1 : 1;
-      if (at === "project") return statusRank(a.status) - statusRank(b.status);
-      return supportStatusRank((a.support_status ?? "Open") as SupportStatus) - supportStatusRank((b.support_status ?? "Open") as SupportStatus);
-    });
-  }, [projects]);
+  const isSupport = project?.entry_type === "support";
+  const projectId = project?.id ?? "";
 
   useEffect(() => {
-    if (!selectedProject) return;
-    if (selectedProject.entry_type === "support") {
-      setSupportStatus((selectedProject.support_status ?? "Open") as SupportStatus);
+    if (!project || !open) return;
+    setNote(""); setBlocker(""); setWeekLabel(currentWeekLabel());
+    if (project.entry_type === "support") {
+      setSupportStatus((project.support_status ?? "Open") as SupportStatus);
     } else {
-      setCompletionPct(typeof selectedProject.completion_pct === "number" ? selectedProject.completion_pct : 0);
-      setNextAction(selectedProject.next_action ?? "");
-      setStatus(selectedProject.status);
+      setCompletionPct(typeof project.completion_pct === "number" ? project.completion_pct : 0);
+      setNextAction(project.next_action ?? "");
+      setStatus(project.status);
+      setBlocker(project.blocker ?? "");
     }
-  }, [selectedProject]);
+  }, [project, open]);
 
   const submit = async () => {
     if (!user || !projectId || !note.trim() || !weekLabel) return;
@@ -464,34 +470,22 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
 
     setSaving(false);
     toast.success("Update logged");
-    setOpen(false);
-    setNote(""); setBlocker(""); setStatus("On Track"); setSupportStatus("Open");
-    setProjectId(""); setWeekLabel(currentWeekLabel());
-    setCompletionPct(0); setNextAction("");
+    onOpenChange(false);
     onCreated();
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="secondary" disabled={projects.length === 0}>Log update</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Log update</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Log update</DialogTitle>
+        </DialogHeader>
+        {project && (
+          <p className="text-sm text-muted-foreground -mt-2">
+            {isSupport ? "[Support] " : ""}{project.name} — {project.site}
+          </p>
+        )}
         <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Entry</Label>
-            <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger><SelectValue placeholder="Select an entry" /></SelectTrigger>
-              <SelectContent>
-                {sorted.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {(p.entry_type === "support" ? "[Support] " : "")}{p.name} — {p.site}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Week</Label>
@@ -525,18 +519,18 @@ function LogUpdateDialog({ projects, onCreated }: { projects: ProjectRow[]; onCr
             <>
               <div className="space-y-1.5">
                 <Label>Progress ({completionPct}%)</Label>
-                <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} disabled={!projectId} />
+                <Input type="range" min={0} max={100} step={5} value={completionPct} onChange={(e) => setCompletionPct(Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
                 <Label>Next action</Label>
-                <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" disabled={!projectId} />
+                <Input value={nextAction} onChange={(e) => setNextAction(e.target.value)} placeholder="What needs to happen next (and who owns it)" />
               </div>
               <div className="space-y-1.5"><Label>Blocker (optional)</Label><Input value={blocker} onChange={(e) => setBlocker(e.target.value)} /></div>
             </>
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={submit} disabled={saving || !projectId || !note.trim() || !weekLabel}>
             {saving ? "Saving…" : "Log update"}
           </Button>
