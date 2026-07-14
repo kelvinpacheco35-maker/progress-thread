@@ -16,7 +16,7 @@ import {
 import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
-import { Copy, Check, ArrowUpDown, Star, Pencil, Archive, ArchiveRestore, Trash2, Search, AlertCircle } from "lucide-react";
+import { Copy, Check, ArrowUpDown, Star, Pencil, Archive, ArchiveRestore, Trash2, Search, AlertCircle, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/all-projects")({
