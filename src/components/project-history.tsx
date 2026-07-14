@@ -123,6 +123,9 @@ export function ProjectHistoryDialog({
             <p className="text-sm">{project.next_action}</p>
           </div>
         )}
+        {project.description && (
+          <p className="text-sm text-muted-foreground border-l-2 border-border pl-3">{project.description}</p>
+        )}
         {project.pending_approval && (
           <div className="rounded-md border border-[var(--status-atrisk)]/40 bg-[var(--status-atrisk)]/10 px-3 py-2 text-sm">
             <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-atrisk)] mb-0.5">Closure pending admin approval</div>
