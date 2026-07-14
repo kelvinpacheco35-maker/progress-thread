@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
-import { SITES, STATUSES, PRIORITIES, CATEGORIES, formatDate, statusRank, priorityRank, priorityClasses, isOverdue, weeksBetween, daysSince, type Status, type Priority, type Category } from "@/lib/ci";
+import { SITES, STATUSES, PRIORITIES, CATEGORIES, SUPPORT_STATUSES, formatDate, statusRank, supportStatusRank, priorityRank, priorityClasses, isOverdue, weeksBetween, daysSince, type Status, type SupportStatus, type Priority, type Category, type EntryType } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +13,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { StatusBadge } from "@/components/status-badge";
+import { StatusBadge, SupportStatusBadge, EntryTypeBadge } from "@/components/status-badge";
 import { ProjectHistoryDialog, type ProjectRow, type UpdateRow } from "@/components/project-history";
 import { toast } from "sonner";
 import { Copy, Check, ArrowUpDown, Star, Pencil, Archive, ArchiveRestore, Trash2, Search, AlertCircle } from "lucide-react";
