@@ -192,19 +192,20 @@ function AllProjectsPage() {
 
   const approveClosure = async (r: ProjectRow) => {
     const isSupport = r.entry_type === "support";
-    const patch: Record<string, unknown> = {
-      pending_approval: false,
-      approved_at: new Date().toISOString(),
-      approved_by: (await supabase.auth.getUser()).data.user?.id ?? null,
-      rejection_reason: null,
-    };
-    if (isSupport) patch.support_status = "Done";
-    else patch.status = "Complete";
-    const { error } = await supabase.from("projects").update(patch).eq("id", r.id);
-    if (error) return toast.error(error.message);
     const { data: userData } = await supabase.auth.getUser();
     const uid = userData.user?.id;
-    const approverName = uid ? (profiles[uid] ?? "admin") : "admin";
+    if (!uid) return toast.error("Not signed in");
+    const { error } = await supabase.from("projects").update({
+      pending_approval: false,
+      approved_at: new Date().toISOString(),
+      approved_by: uid,
+      rejection_reason: null,
+      ...(isSupport
+        ? { support_status: "Done" as const }
+        : { status: "Complete" as const }),
+    }).eq("id", r.id);
+    if (error) return toast.error(error.message);
+    const approverName = profiles[uid] ?? "admin";
     await supabase.from("weekly_updates").insert({
       project_id: r.id,
       author_id: uid,
