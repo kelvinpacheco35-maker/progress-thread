@@ -38,6 +38,7 @@ function MyProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | EntryType>("all");
+  const [logUpdateFor, setLogUpdateFor] = useState<ProjectRow | null>(null);
 
   const currentWeek = currentWeekLabel();
 
