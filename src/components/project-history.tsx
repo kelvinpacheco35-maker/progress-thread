@@ -39,6 +39,12 @@ export type ProjectRow = {
   entry_type?: EntryType;
   support_status?: SupportStatus | null;
   requester?: string | null;
+  pending_approval?: boolean;
+  previous_status?: Status | null;
+  previous_support_status?: SupportStatus | null;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejection_reason?: string | null;
 };
 
 export function ProjectHistoryDialog({
