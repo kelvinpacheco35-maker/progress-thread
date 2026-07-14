@@ -24,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/all-projects")({
   component: AllProjectsPage,
 });
 
-type ViewMode = "active" | "completed" | "archived" | "all";
+type ViewMode = "active" | "pending" | "completed" | "archived" | "all";
 type SortMode = "risk" | "updated" | "priority" | "due";
 
 function AllProjectsPage() {
