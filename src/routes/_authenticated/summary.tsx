@@ -182,6 +182,14 @@ function SummaryPage() {
                   at={s.statusCounts["At Risk"]}
                   bl={s.statusCounts["Blocked"]}
                 />
+                {s.supportTotal > 0 && (
+                  <div className="rounded-md border border-[var(--support-inprogress)]/25 bg-[var(--support-inprogress)]/5 px-2.5 py-1.5 text-xs flex items-center gap-3">
+                    <span className="font-semibold uppercase tracking-wide text-[var(--support-inprogress)]">Support</span>
+                    <span className="text-muted-foreground">
+                      {s.supportOpen} open · {s.supportCompletedPeriod} completed this {mode === "weekly" ? "week" : "month"}
+                    </span>
+                  </div>
+                )}
                 {noActivity ? (
                   <div className="text-sm text-muted-foreground">No activity this period.</div>
                 ) : (
