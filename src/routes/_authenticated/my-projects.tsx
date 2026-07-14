@@ -291,20 +291,14 @@ function NewEntryDialog({ onCreated, defaultSite, fixedType }: { onCreated: () =
   return (
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
       <DialogTrigger asChild>
-        <Button><Plus className="w-4 h-4 mr-1" /> New entry</Button>
+        <Button variant={fixedType === "project" ? "default" : "secondary"}>
+          <Plus className="w-4 h-4 mr-1" /> {fixedType === "project" ? "New project" : "New support"}
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>New entry</DialogTitle></DialogHeader>
-
-        <div className="space-y-1.5">
-          <Label>Type</Label>
-          <Tabs value={entryType} onValueChange={(v) => setEntryType(v as EntryType)}>
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="project">CI Project</TabsTrigger>
-              <TabsTrigger value="support">Support</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </div>
+        <DialogHeader>
+          <DialogTitle>{fixedType === "project" ? "New CI project" : "New support item"}</DialogTitle>
+        </DialogHeader>
 
         <div className="space-y-3">
           <div className="space-y-1.5">
