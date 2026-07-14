@@ -540,22 +540,23 @@ function EditProjectDialog({
   const save = async () => {
     if (!project) return;
     setSaving(true);
+    const ownerChanged = isAdmin && ownerId && ownerId !== project.owner_id;
     if (isSupport) {
-      const { error } = await supabase.from("projects").update({
+      const patch: Record<string, unknown> = {
         name: name.trim(),
         description: description.trim() || null,
         support_status: supportStatus,
         due_date: dueDate || null,
         priority,
         requester: requester.trim() || null,
-      }).eq("id", project.id);
-      setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Support item updated");
+      };
+      if (ownerChanged) patch.owner_id = ownerId;
+      const { error } = await supabase.from("projects").update(patch).eq("id", project.id);
+      if (error) { setSaving(false); return toast.error(error.message); }
     } else {
       if (!dueDate) { setSaving(false); return toast.error("Due date is required"); }
       if (!category) { setSaving(false); return toast.error("Category is required"); }
-      const { error } = await supabase.from("projects").update({
+      const patch: Record<string, unknown> = {
         name: name.trim(),
         description: description.trim() || null,
         status,
@@ -567,11 +568,30 @@ function EditProjectDialog({
         problem_statement: problemStatement.trim() || null,
         start_date: startDate || null,
         completion_pct: Math.max(0, Math.min(100, Number(completionPct) || 0)),
-      }).eq("id", project.id);
-      setSaving(false);
-      if (error) return toast.error(error.message);
-      toast.success("Project updated");
+      };
+      if (ownerChanged) patch.owner_id = ownerId;
+      const { error } = await supabase.from("projects").update(patch).eq("id", project.id);
+      if (error) { setSaving(false); return toast.error(error.message); }
     }
+
+    if (ownerChanged && currentProfile) {
+      const fromName = profiles[project.owner_id] ?? "unknown";
+      const toName = profiles[ownerId] ?? "unknown";
+      const note = `Reassigned from ${fromName} to ${toName} by ${currentProfile.full_name}`;
+      const logRow: Record<string, unknown> = {
+        project_id: project.id,
+        author_id: currentProfile.id,
+        week_label: `reassign-${new Date().toISOString().slice(0, 10)}`,
+        note,
+      };
+      if (isSupport) logRow.support_status = supportStatus;
+      else logRow.status = status;
+      const { error: logErr } = await supabase.from("weekly_updates").insert(logRow);
+      if (logErr) toast.error(`Saved, but reassignment log failed: ${logErr.message}`);
+    }
+
+    setSaving(false);
+    toast.success(isSupport ? "Support item updated" : "Project updated");
     onOpenChange(false);
     onSaved();
   };
