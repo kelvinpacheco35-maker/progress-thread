@@ -493,8 +493,9 @@ function IconBtn({
 }
 
 function EditProjectDialog({
-  project, onOpenChange, onSaved,
-}: { project: ProjectRow | null; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  project, onOpenChange, onSaved, profiles,
+}: { project: ProjectRow | null; onOpenChange: (v: boolean) => void; onSaved: () => void; profiles: Record<string, string> }) {
+  const { isAdmin, profile: currentProfile } = useAuth();
   const isSupport = project?.entry_type === "support";
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -509,6 +510,7 @@ function EditProjectDialog({
   const [startDate, setStartDate] = useState("");
   const [completionPct, setCompletionPct] = useState<number>(0);
   const [requester, setRequester] = useState("");
+  const [ownerId, setOwnerId] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -526,8 +528,14 @@ function EditProjectDialog({
       setStartDate(project.start_date ?? "");
       setCompletionPct(project.completion_pct ?? 0);
       setRequester(project.requester ?? "");
+      setOwnerId(project.owner_id);
     }
   }, [project]);
+
+  const ownerOptions = useMemo(
+    () => Object.entries(profiles).sort((a, b) => a[1].localeCompare(b[1])),
+    [profiles],
+  );
 
   const save = async () => {
     if (!project) return;
