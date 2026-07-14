@@ -34,6 +34,9 @@
   --color-status-blocked: var(--status-blocked);
   --color-status-complete: var(--status-complete);
   --color-status-hold: var(--status-hold);
+  --color-support-open: var(--support-open);
+  --color-support-inprogress: var(--support-inprogress);
+  --color-support-done: var(--support-done);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -82,6 +85,11 @@
   --status-complete: #3A6EA5;
   --status-hold: #6B7280;
 
+  /* Support status tokens — distinct family from project statuses */
+  --support-open: #0284C7;       /* sky */
+  --support-inprogress: #7C3AED; /* violet */
+  --support-done: #0F766E;       /* teal */
+
   --sidebar: #1C4C77;
   --sidebar-foreground: #FFFFFF;
   --sidebar-primary: #FFFFFF;
@@ -112,6 +120,10 @@
   --border: #26313D;
   --input: #26313D;
   --ring: #4A93CC;
+
+  --support-open: #38BDF8;
+  --support-inprogress: #A78BFA;
+  --support-done: #2DD4BF;
 }
 
 @layer base {

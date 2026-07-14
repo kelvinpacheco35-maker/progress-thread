@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status } from "@/lib/ci";
+import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status, type SupportStatus, type EntryType } from "@/lib/ci";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/status-badge";
@@ -15,12 +15,13 @@ type Row = {
   id: string;
   project_id: string;
   week_label: string;
-  status: Status;
+  status: Status | null;
+  support_status: SupportStatus | null;
   note: string;
   created_at: string;
 };
 
-type Proj = { id: string; name: string; site: string; status: Status; created_at: string };
+type Proj = { id: string; name: string; site: string; status: Status; support_status: SupportStatus | null; entry_type: EntryType; created_at: string };
 
 function priorWeekLabel(): string {
   const d = new Date();
@@ -43,11 +44,11 @@ function SummaryPage() {
   useEffect(() => {
     (async () => {
       const [{ data: p }, { data: u }] = await Promise.all([
-        supabase.from("projects").select("id, name, site, status, created_at"),
-        supabase.from("weekly_updates").select("id, project_id, week_label, status, note, created_at").order("created_at", { ascending: false }),
+        supabase.from("projects").select("id, name, site, status, support_status, entry_type, created_at"),
+        supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, created_at").order("created_at", { ascending: false }),
       ]);
-      setProjects((p ?? []) as Proj[]);
-      setUpdates((u ?? []) as Row[]);
+      setProjects((p ?? []) as unknown as Proj[]);
+      setUpdates((u ?? []) as unknown as Row[]);
       setLoading(false);
     })();
   }, []);
@@ -59,33 +60,50 @@ function SummaryPage() {
 
   const perSite = useMemo(() => {
     return SITES.map((site) => {
-      const siteProjects = projects.filter((p) => p.site === site);
+      const siteAll = projects.filter((p) => p.site === site);
+      const siteProjects = siteAll.filter((p) => (p.entry_type ?? "project") === "project");
+      const siteSupport = siteAll.filter((p) => p.entry_type === "support");
       const activeProjects = siteProjects.filter((p) => p.status !== "Complete");
       const statusCounts: Record<Status, number> = {
         "On Track": 0, "At Risk": 0, "Blocked": 0, "Complete": 0, "On Hold": 0,
       };
-      const latest = new Map<string, Status>();
-      for (const u of updates) if (!latest.has(u.project_id)) latest.set(u.project_id, u.status);
+      const latestP = new Map<string, Status>();
+      const latestS = new Map<string, SupportStatus>();
+      for (const u of updates) {
+        if (u.status && !latestP.has(u.project_id)) latestP.set(u.project_id, u.status);
+        if (u.support_status && !latestS.has(u.project_id)) latestS.set(u.project_id, u.support_status);
+      }
       for (const p of siteProjects) {
-        const s = latest.get(p.id) ?? p.status;
+        const s = latestP.get(p.id) ?? p.status;
         statusCounts[s] += 1;
       }
-      const bucketUpdates = updates.filter((u) => bucketOf(u) === currentBucket && siteProjects.some((p) => p.id === u.project_id));
+      // Support counts for this period
+      let supportOpen = 0;
+      let supportCompletedPeriod = 0;
+      for (const s of siteSupport) {
+        const cur = latestS.get(s.id) ?? s.support_status ?? "Open";
+        if (cur !== "Done") supportOpen += 1;
+      }
+      const bucketUpdates = updates.filter((u) => bucketOf(u) === currentBucket && siteAll.some((p) => p.id === u.project_id));
+      const projectBucketUpdates = bucketUpdates.filter((u) => u.status !== null);
       const newProjects = siteProjects.filter((p) => bucketOfDate(p.created_at) === currentBucket);
-      const completions = bucketUpdates.filter((u) => u.status === "Complete");
-      const changes = bucketUpdates.map((u) => ({
+      const completions = projectBucketUpdates.filter((u) => u.status === "Complete");
+      supportCompletedPeriod = bucketUpdates.filter((u) => u.support_status === "Done" && siteSupport.some((s) => s.id === u.project_id)).length;
+      const changes = projectBucketUpdates.map((u) => ({
         projectName: siteProjects.find((p) => p.id === u.project_id)?.name ?? "—",
-        status: u.status, note: u.note,
+        status: u.status as Status, note: u.note,
       }));
 
-      // Prior-period delta: new in prior period minus completions in prior period
       const priorNew = siteProjects.filter((p) => bucketOfDate(p.created_at) === priorBucket).length;
       const priorCompletions = updates.filter((u) => bucketOf(u) === priorBucket && u.status === "Complete" && siteProjects.some((p) => p.id === u.project_id)).length;
       const currDelta = newProjects.length - completions.length;
       const priorDelta = priorNew - priorCompletions;
       const delta = currDelta - priorDelta;
 
-      return { site, activeCount: activeProjects.length, statusCounts, newProjects, completions, changes, delta };
+      return {
+        site, activeCount: activeProjects.length, statusCounts, newProjects, completions, changes, delta,
+        supportTotal: siteSupport.length, supportOpen, supportCompletedPeriod,
+      };
     });
   }, [projects, updates, currentBucket, priorBucket, mode]);
 
@@ -164,6 +182,14 @@ function SummaryPage() {
                   at={s.statusCounts["At Risk"]}
                   bl={s.statusCounts["Blocked"]}
                 />
+                {s.supportTotal > 0 && (
+                  <div className="rounded-md border border-[var(--support-inprogress)]/25 bg-[var(--support-inprogress)]/5 px-2.5 py-1.5 text-xs flex items-center gap-3">
+                    <span className="font-semibold uppercase tracking-wide text-[var(--support-inprogress)]">Support</span>
+                    <span className="text-muted-foreground">
+                      {s.supportOpen} open · {s.supportCompletedPeriod} completed this {mode === "weekly" ? "week" : "month"}
+                    </span>
+                  </div>
+                )}
                 {noActivity ? (
                   <div className="text-sm text-muted-foreground">No activity this period.</div>
                 ) : (
