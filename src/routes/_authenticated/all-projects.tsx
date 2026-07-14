@@ -315,14 +315,18 @@ function AllProjectsPage() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const overdue = isOverdue(r.due_date, r.displayStatus);
+                const overdue = isOverdue(r.due_date, r.displayStatus as Status | SupportStatus);
                 return (
-                <tr key={r.id} className={cn("border-t border-border hover:bg-muted/30", r.archived && "opacity-60")}>
+                <tr key={r.id} className={cn("border-t border-border hover:bg-muted/30", r.archived && "opacity-60", r.isSupport && "bg-muted/10")}>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <EntryTypeBadge type={r.isSupport ? "support" : "project"} />
                       <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
                         {r.name}
                       </button>
+                      {r.priority === "High" && (
+                        <span className={cn("text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 border", priorityClasses("High"))}>High</span>
+                      )}
                       {r.needsUpdate && (
                         <span
                           title={r.staleDays === null ? "No weekly update yet" : `Last update ${r.staleDays} days ago`}
@@ -335,7 +339,10 @@ function AllProjectsPage() {
                         <span className="text-[10px] rounded px-1.5 py-0.5 bg-muted text-muted-foreground border">Archived</span>
                       )}
                     </div>
-                    {r.latestBlocker && (
+                    {r.isSupport && r.requester && (
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[320px]">Requester: {r.requester}</div>
+                    )}
+                    {r.latestBlocker && !r.isSupport && (
                       <div className="text-xs text-[var(--status-blocked)] mt-0.5 truncate max-w-[320px]" title={r.latestBlocker}>
                         Blocker: {r.latestBlocker}
                       </div>
@@ -343,12 +350,16 @@ function AllProjectsPage() {
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
                   <td className="px-3 py-2">
-                    {r.category ? (
+                    {r.isSupport ? <span className="text-muted-foreground">—</span> : r.category ? (
                       <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
                     ) : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
-                  <td className="px-3 py-2"><StatusBadge status={r.displayStatus} /></td>
+                  <td className="px-3 py-2">
+                    {r.isSupport
+                      ? <SupportStatusBadge status={r.supportStatus} />
+                      : <StatusBadge status={r.projectStatus} />}
+                  </td>
                   <td className="px-3 py-2">
                     {r.priority && (
                       <span className={cn("text-xs font-medium rounded-full px-2 py-0.5 border", priorityClasses(r.priority as Priority))}>
