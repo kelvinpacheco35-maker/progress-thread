@@ -35,6 +35,7 @@ function AllProjectsPage() {
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | EntryType>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("active");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("risk");
