@@ -85,16 +85,22 @@ function AllProjectsPage() {
 
   const rows = useMemo(() => {
     let out = projects.map((p) => {
+      const isSupport = p.entry_type === "support";
       const latest = latestByProject.get(p.id);
-      const currentStatus = (latest?.status ?? p.status) as Status;
+      const projectStatus = (latest?.status ?? p.status) as Status;
+      const supportStat = (latest?.support_status ?? p.support_status ?? "Open") as SupportStatus;
+      const displayStatus: string = isSupport ? supportStat : projectStatus;
       const lastUpdated = latest?.created_at ?? null;
       const staleDays = lastUpdated ? daysSince(lastUpdated) : null;
-      const isComplete = currentStatus === "Complete";
-      const needsUpdate = !isComplete && !p.archived && (staleDays === null || staleDays > 7);
+      const isComplete = isSupport ? supportStat === "Done" : projectStatus === "Complete";
+      const needsUpdate = !isSupport && !isComplete && !p.archived && (staleDays === null || staleDays > 7);
       return {
         ...p,
         owner_name: profiles[p.owner_id],
-        currentStatus,
+        isSupport,
+        projectStatus,
+        supportStatus: supportStat,
+        displayStatus,
         latestNote: latest?.note ?? null,
         latestBlocker: latest?.blocker ?? p.blocker,
         lastUpdated: lastUpdated ?? p.created_at,
@@ -107,13 +113,13 @@ function AllProjectsPage() {
       };
     });
 
-    // View mode filter
     if (viewMode === "active") out = out.filter((r) => !r.archived && !r.isComplete);
     else if (viewMode === "completed") out = out.filter((r) => !r.archived && r.isComplete);
     else if (viewMode === "archived") out = out.filter((r) => r.archived);
 
+    if (typeFilter !== "all") out = out.filter((r) => (r.entry_type ?? "project") === typeFilter);
     if (siteFilter !== "all") out = out.filter((r) => r.site === siteFilter);
-    if (statusFilter !== "all") out = out.filter((r) => r.currentStatus === statusFilter);
+    if (statusFilter !== "all") out = out.filter((r) => r.displayStatus === statusFilter);
     if (categoryFilter !== "all") out = out.filter((r) => r.category === categoryFilter);
     if (search.trim()) {
       const q = search.trim().toLowerCase();
@@ -121,7 +127,8 @@ function AllProjectsPage() {
     }
     const byUpdated = (a: typeof out[number], b: typeof out[number]) =>
       new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
-    if (sortMode === "risk") out.sort((a, b) => statusRank(a.currentStatus) - statusRank(b.currentStatus) || byUpdated(a, b));
+    const riskRank = (r: typeof out[number]) => r.isSupport ? supportStatusRank(r.supportStatus) + 10 : statusRank(r.projectStatus);
+    if (sortMode === "risk") out.sort((a, b) => riskRank(a) - riskRank(b) || byUpdated(a, b));
     else if (sortMode === "priority") out.sort((a, b) => priorityRank((a.priority ?? "Medium") as Priority) - priorityRank((b.priority ?? "Medium") as Priority) || byUpdated(a, b));
     else if (sortMode === "due") out.sort((a, b) => {
       const av = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY;
@@ -130,7 +137,7 @@ function AllProjectsPage() {
     });
     else out.sort(byUpdated);
     return out;
-  }, [projects, latestByProject, profiles, siteFilter, statusFilter, categoryFilter, viewMode, search, sortMode]);
+  }, [projects, latestByProject, profiles, typeFilter, siteFilter, statusFilter, categoryFilter, viewMode, search, sortMode]);
 
   const siteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
