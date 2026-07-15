@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import {
   SITES, STATUSES, PRIORITIES, CATEGORIES, SUPPORT_STATUSES,
-  currentWeekLabel, formatDate,
+  currentWeekLabel, formatDate, statusRank, supportStatusRank,
   type Status, type SupportStatus, type Site, type Priority, type Category, type EntryType,
 } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
