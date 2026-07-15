@@ -87,9 +87,36 @@ function MyProjectsPage() {
   }, [updates, nameMap]);
 
   const filtered = useMemo(() => {
-    if (typeFilter === "all") return projects;
-    return projects.filter((p) => (p.entry_type ?? "project") === typeFilter);
-  }, [projects, typeFilter]);
+    const base = typeFilter === "all"
+      ? projects
+      : projects.filter((p) => (p.entry_type ?? "project") === typeFilter);
+    const SEVEN_DAYS_MS = 7 * 86400 * 1000;
+    const now = Date.now();
+    const needsUpdate = (p: ProjectRow) => {
+      const ups = updatesByProject.get(p.id) ?? [];
+      if (ups.length === 0) return true;
+      const latest = ups[0];
+      return now - new Date(latest.created_at).getTime() >= SEVEN_DAYS_MS;
+    };
+    const rankFor = (p: ProjectRow) => {
+      const ups = updatesByProject.get(p.id) ?? [];
+      const latest = ups[0];
+      if ((p.entry_type ?? "project") === "support") {
+        const s = (latest?.support_status ?? p.support_status ?? "Open") as SupportStatus;
+        return supportStatusRank(s);
+      }
+      return statusRank((latest?.status ?? p.status) as Status);
+    };
+    return base.slice().sort((a, b) => {
+      const na = needsUpdate(a) ? 0 : 1;
+      const nb = needsUpdate(b) ? 0 : 1;
+      if (na !== nb) return na - nb;
+      const ra = rankFor(a);
+      const rb = rankFor(b);
+      if (ra !== rb) return ra - rb;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [projects, typeFilter, updatesByProject]);
 
   const openHistory = (p: ProjectRow) => setOpenProject({ ...p, owner_name: profile?.full_name });
 
