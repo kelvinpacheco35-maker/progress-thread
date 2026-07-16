@@ -68,6 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refresh: async () => loadUserData(session?.user.id ?? null),
     signOut: async () => {
       await supabase.auth.signOut();
+      // Full teardown so the picker becomes reachable and cached protected
+      // data can't leak. onAuthStateChange in __root.tsx invalidates router.
+      if (typeof window !== "undefined") {
+        window.location.replace("/auth");
+      }
     },
   };
 

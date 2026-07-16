@@ -9,21 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedSummaryRouteImport } from './routes/_authenticated/summary'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedMyProjectsRouteImport } from './routes/_authenticated/my-projects'
 import { Route as AuthenticatedExecutiveSummaryRouteImport } from './routes/_authenticated/executive-summary'
 import { Route as AuthenticatedAllProjectsRouteImport } from './routes/_authenticated/all-projects'
+import { Route as ApiPublicSessionForUserRouteImport } from './routes/api/public/session-for-user'
 
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -37,6 +33,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSummaryRoute = AuthenticatedSummaryRouteImport.update({
   id: '/summary',
@@ -65,89 +66,93 @@ const AuthenticatedAllProjectsRoute =
     path: '/all-projects',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicSessionForUserRoute = ApiPublicSessionForUserRouteImport.update({
+  id: '/api/public/session-for-user',
+  path: '/api/public/session-for-user',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/all-projects': typeof AuthenticatedAllProjectsRoute
   '/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/my-projects': typeof AuthenticatedMyProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/summary': typeof AuthenticatedSummaryRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/api/public/session-for-user': typeof ApiPublicSessionForUserRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/all-projects': typeof AuthenticatedAllProjectsRoute
   '/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/my-projects': typeof AuthenticatedMyProjectsRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/summary': typeof AuthenticatedSummaryRoute
+  '/users': typeof AuthenticatedUsersRoute
+  '/api/public/session-for-user': typeof ApiPublicSessionForUserRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/all-projects': typeof AuthenticatedAllProjectsRoute
   '/_authenticated/executive-summary': typeof AuthenticatedExecutiveSummaryRoute
   '/_authenticated/my-projects': typeof AuthenticatedMyProjectsRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/summary': typeof AuthenticatedSummaryRoute
+  '/_authenticated/users': typeof AuthenticatedUsersRoute
+  '/api/public/session-for-user': typeof ApiPublicSessionForUserRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/auth'
-    | '/reset-password'
     | '/all-projects'
     | '/executive-summary'
     | '/my-projects'
     | '/settings'
     | '/summary'
+    | '/users'
+    | '/api/public/session-for-user'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/reset-password'
     | '/all-projects'
     | '/executive-summary'
     | '/my-projects'
     | '/settings'
     | '/summary'
+    | '/users'
+    | '/api/public/session-for-user'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/reset-password'
     | '/_authenticated/all-projects'
     | '/_authenticated/executive-summary'
     | '/_authenticated/my-projects'
     | '/_authenticated/settings'
     | '/_authenticated/summary'
+    | '/_authenticated/users'
+    | '/api/public/session-for-user'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
+  ApiPublicSessionForUserRoute: typeof ApiPublicSessionForUserRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -168,6 +173,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/users': {
+      id: '/_authenticated/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/summary': {
       id: '/_authenticated/summary'
@@ -204,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAllProjectsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/session-for-user': {
+      id: '/api/public/session-for-user'
+      path: '/api/public/session-for-user'
+      fullPath: '/api/public/session-for-user'
+      preLoaderRoute: typeof ApiPublicSessionForUserRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -213,6 +232,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMyProjectsRoute: typeof AuthenticatedMyProjectsRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSummaryRoute: typeof AuthenticatedSummaryRoute
+  AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -221,6 +241,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMyProjectsRoute: AuthenticatedMyProjectsRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSummaryRoute: AuthenticatedSummaryRoute,
+  AuthenticatedUsersRoute: AuthenticatedUsersRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -230,18 +251,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
+  ApiPublicSessionForUserRoute: ApiPublicSessionForUserRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
