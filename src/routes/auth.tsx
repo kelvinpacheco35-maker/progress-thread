@@ -68,7 +68,6 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/my-projects`,
             emailRedirectTo: `${PUBLISHED_APP_ORIGIN}/my-projects`,
             data: { full_name: fullName.trim(), site },
           },
