@@ -39,6 +39,17 @@ function SettingsPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">Your account and access.</p>
       </div>
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Manage users</CardTitle>
+            <CardDescription>Add team members and set their role.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a href="/users" className="text-sm text-primary underline">Open Users →</a>
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader><CardTitle>Account</CardTitle></CardHeader>
         <CardContent className="text-sm space-y-1">
