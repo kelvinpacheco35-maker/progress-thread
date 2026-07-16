@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SITES } from "@/lib/ci";
@@ -10,13 +10,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 
+type AuthSearch = { reset?: string };
+
 export const Route = createFileRoute("/auth")({
   head: () => ({ meta: [{ title: "Sign in — CI Status Tracker" }] }),
+  validateSearch: (search: Record<string, unknown>): AuthSearch => ({
+    reset: typeof search.reset === "string" ? search.reset : undefined,
+  }),
   component: AuthPage,
 });
 
+type Mode = "signin" | "signup" | "forgot";
+
 function AuthPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -24,6 +31,13 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const search = useSearch({ from: "/auth" }) as AuthSearch;
+
+  useEffect(() => {
+    if (search.reset === "success") {
+      toast.success("Password updated — please sign in");
+    }
+  }, [search.reset]);
 
   useEffect(() => {
     if (user) navigate({ to: "/my-projects", replace: true });
@@ -33,6 +47,15 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     try {
+      if (mode === "forgot") {
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        // Generic message — do not reveal whether the email exists
+        toast.success("If that email is registered, a reset link has been sent.");
+        setMode("signin");
+        return;
+      }
       if (mode === "signup") {
         if (!fullName.trim()) return toast.error("Full name is required");
         if (!site) return toast.error("Site is required");
@@ -65,12 +88,14 @@ function AuthPage() {
             CI Status Tracker
           </div>
           <CardTitle className="text-xl pt-2">
-            {mode === "signin" ? "Sign in" : "Create your account"}
+            {mode === "signin" ? "Sign in" : mode === "signup" ? "Create your account" : "Reset your password"}
           </CardTitle>
           <CardDescription>
             {mode === "signin"
               ? "Internal tool for tracking CI project status across sites."
-              : "Your name and site are required — they appear on every entry you submit."}
+              : mode === "signup"
+              ? "Your name and site are required — they appear on every entry you submit."
+              : "Enter your email and we'll send you a link to reset your password."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,15 +121,36 @@ function AuthPage() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
+            {mode !== "forgot" && (
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setMode("forgot")}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+            )}
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+              {loading
+                ? "Please wait…"
+                : mode === "signin"
+                ? "Sign in"
+                : mode === "signup"
+                ? "Create account"
+                : "Send reset link"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
-              {mode === "signin" ? (
+              {mode === "forgot" ? (
+                <button type="button" className="text-primary underline" onClick={() => setMode("signin")}>
+                  Back to sign in
+                </button>
+              ) : mode === "signin" ? (
                 <>Need an account?{" "}
                   <button type="button" className="text-primary underline" onClick={() => setMode("signup")}>Sign up</button>
                 </>
