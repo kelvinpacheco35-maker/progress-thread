@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
+import { PUBLISHED_APP_ORIGIN, redirectToPublishedAuthHost } from "@/lib/auth-host";
 
 type AuthSearch = { reset?: string };
 
@@ -34,6 +35,10 @@ function AuthPage() {
   const search = useSearch({ from: "/auth" }) as AuthSearch;
 
   useEffect(() => {
+    redirectToPublishedAuthHost();
+  }, []);
+
+  useEffect(() => {
     if (search.reset === "success") {
       toast.success("Password updated — please sign in");
     }
@@ -49,7 +54,7 @@ function AuthPage() {
     try {
       if (mode === "forgot") {
         await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/reset-password`,
+          redirectTo: `${PUBLISHED_APP_ORIGIN}/reset-password`,
         });
         // Generic message — do not reveal whether the email exists
         toast.success("If that email is registered, a reset link has been sent.");
@@ -63,7 +68,7 @@ function AuthPage() {
           email,
           password,
           options: {
-            emailRedirectTo: `${window.location.origin}/my-projects`,
+            emailRedirectTo: `${PUBLISHED_APP_ORIGIN}/my-projects`,
             data: { full_name: fullName.trim(), site },
           },
         });
