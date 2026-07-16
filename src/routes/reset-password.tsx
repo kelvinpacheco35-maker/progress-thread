@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
+import { redirectToPublishedAuthHost } from "@/lib/auth-host";
 
 export const Route = createFileRoute("/reset-password")({
   head: () => ({ meta: [{ title: "Reset password — CI Status Tracker" }] }),
@@ -20,6 +21,7 @@ function ResetPasswordPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (redirectToPublishedAuthHost()) return;
     // Supabase places the recovery token in the URL hash and fires
     // PASSWORD_RECOVERY once the client picks it up.
     const { data } = supabase.auth.onAuthStateChange((event) => {
