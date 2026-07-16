@@ -60,6 +60,10 @@ export const Route = createFileRoute("/api/public/session-for-user")({
         return Response.json({
           access_token: signIn.session.access_token,
           refresh_token: signIn.session.refresh_token,
+          expires_at: signIn.session.expires_at,
+          expires_in: signIn.session.expires_in,
+          token_type: signIn.session.token_type,
+          user: signIn.session.user,
         });
       },
     },

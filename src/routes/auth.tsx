@@ -40,16 +40,19 @@ function AuthPage() {
         toast.error(`Sign-in failed: ${await res.text()}`);
         return;
       }
-      const { access_token, refresh_token } = (await res.json()) as {
-        access_token: string;
-        refresh_token: string;
-      };
-      const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
-      if (setErr) {
-        toast.error(setErr.message);
-        return;
-      }
-      navigate({ to: "/my-projects", replace: true });
+      const session = await res.json();
+
+      // Write the session directly to localStorage in the shape supabase-js
+      // expects. This avoids calling supabase.auth.setSession(), which
+      // internally hits /auth/v1/user — a request the Lovable preview
+      // fetch-proxy blocks, surfacing as "Failed to fetch".
+      const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
+      const storageKey = `sb-${projectRef}-auth-token`;
+      window.localStorage.setItem(storageKey, JSON.stringify(session));
+
+      // Hard reload so AuthProvider reads the new session from storage and
+      // the router remounts with the authenticated context.
+      window.location.replace("/my-projects");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
