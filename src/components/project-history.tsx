@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { StatusBadge, SupportStatusBadge, EntryTypeBadge, PendingApprovalBadge } from "@/components/status-badge";
-import { formatDate, priorityClasses, isOverdue } from "@/lib/ci";
+import { formatDate, priorityClasses, isOverdue, weeksBetween } from "@/lib/ci";
 import type { Status, SupportStatus, Priority, Category, EntryType } from "@/lib/ci";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +93,7 @@ export function ProjectHistoryDialog({
             {project.site} · Owner {project.owner_name ?? "—"}
             {isSupport && project.requester ? <> · Requested by {project.requester}</> : null}
             {!isSupport && project.start_date ? <> · Started {formatDate(project.start_date)}</> : <> · Created {formatDate(project.created_at)}</>}
+            {!isSupport && <> · {weeksBetween(project.start_date ?? project.created_at)} weeks tracked</>}
             {project.due_date && (
               <> · Due <span className={cn(overdue && "text-[var(--status-blocked)] font-medium")}>
                 {formatDate(project.due_date)}{overdue && " (Overdue)"}
@@ -125,6 +126,12 @@ export function ProjectHistoryDialog({
         )}
         {project.description && (
           <p className="text-sm text-muted-foreground border-l-2 border-border pl-3">{project.description}</p>
+        )}
+        {project.blocker && (
+          <div className="rounded-md border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/5 px-3 py-2 text-sm">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[var(--status-blocked)] mb-0.5">Blocker</div>
+            <p>{project.blocker}</p>
+          </div>
         )}
         {project.pending_approval && (
           <div className="rounded-md border border-[var(--status-atrisk)]/40 bg-[var(--status-atrisk)]/10 px-3 py-2 text-sm">
