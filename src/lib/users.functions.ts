@@ -106,17 +106,14 @@ export const adminListUsers = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<AdminUser[]> => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }, { data: creds, error: cErr }] =
+    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, created_at"),
+        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, created_at, has_password"),
         supabaseAdmin.from("user_roles").select("user_id, role"),
-        supabaseAdmin.from("user_credentials").select("user_id"),
       ]);
     if (pErr) throw new Error(pErr.message);
     if (rErr) throw new Error(rErr.message);
-    if (cErr) throw new Error(cErr.message);
     const adminSet = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
-    const credSet = new Set((creds ?? []).map((c) => c.user_id as string));
     return (profiles ?? [])
       .map((p: any) => ({
         id: p.id as string,
@@ -124,7 +121,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
         site: p.site as Site,
         is_admin: adminSet.has(p.id as string),
         deactivated: !!p.deactivated_at,
-        has_password: credSet.has(p.id as string),
+        has_password: !!p.has_password,
         created_at: p.created_at as string,
       }))
       .sort(
