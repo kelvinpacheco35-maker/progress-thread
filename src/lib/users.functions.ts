@@ -297,8 +297,8 @@ export const adminSetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; password: string | null }) => {
     if (!/^[0-9a-f-]{36}$/i.test(data.id)) throw new Error("Invalid id");
     if (data.password !== null) {
-      if (typeof data.password !== "string" || data.password.length < 4) {
-        throw new Error("Password must be at least 4 characters, or null to remove");
+      if (typeof data.password !== "string" || data.password.length < 8) {
+        throw new Error("Password must be at least 8 characters, or null to remove");
       }
     }
     return { id: data.id, password: data.password };
