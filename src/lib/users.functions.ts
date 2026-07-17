@@ -272,6 +272,15 @@ export const adminSetDeactivated = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
 
+    // When deactivating, revoke existing sessions so the change takes effect
+    // immediately — not only at next sign-in.
+    if (data.deactivated) {
+      const { error: signOutErr } = await supabaseAdmin.auth.admin.signOut(data.id, "global");
+      if (signOutErr) {
+        console.error("[adminSetDeactivated] signOut failed", signOutErr.message);
+      }
+    }
+
     await logAction(supabaseAdmin, {
       actor_id: context.userId,
       actor_name: await actorName(supabaseAdmin, context.userId),
