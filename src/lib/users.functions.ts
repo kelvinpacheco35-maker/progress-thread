@@ -289,23 +289,6 @@ export const adminSetDeactivated = createServerFn({ method: "POST" })
   });
 
 // ---------- Admin: set/clear password ----------
-async function hashPassword(password: string) {
-  const { pbkdf2Sync, randomBytes } = await import("node:crypto");
-  const salt = randomBytes(16).toString("hex");
-  const hash = pbkdf2Sync(password, salt, 120000, 32, "sha256").toString("hex");
-  return { salt, hash };
-}
-
-async function verifyPassword(password: string, salt: string, expected: string) {
-  const { pbkdf2Sync, timingSafeEqual } = await import("node:crypto");
-  const actual = pbkdf2Sync(password, salt, 120000, 32, "sha256");
-  const exp = Buffer.from(expected, "hex");
-  if (actual.length !== exp.length) return false;
-  return timingSafeEqual(actual, exp);
-}
-
-export { verifyPassword };
-
 export const adminSetPassword = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { id: string; password: string | null }) => {
@@ -320,6 +303,7 @@ export const adminSetPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { hashPassword } = await import("@/lib/password.server");
 
     let action: string;
     if (data.password === null) {
@@ -327,7 +311,7 @@ export const adminSetPassword = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       action = "password_removed";
     } else {
-      const { salt, hash } = await hashPassword(data.password);
+      const { salt, hash } = hashPassword(data.password);
       const { error } = await supabaseAdmin
         .from("user_credentials")
         .upsert(
