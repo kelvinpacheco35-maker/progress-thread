@@ -174,6 +174,42 @@ function AuthPage() {
           ))}
         </div>
       </div>
+
+      <Dialog open={!!pwPrompt} onOpenChange={(o) => !o && setPwPrompt(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Enter password for {pwPrompt?.full_name}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pwPrompt) doSignIn(pwPrompt, pwValue);
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="pw">Password</Label>
+              <Input
+                id="pw"
+                type="password"
+                autoFocus
+                value={pwValue}
+                onChange={(e) => setPwValue(e.target.value)}
+                autoComplete="current-password"
+              />
+              {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPwPrompt(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={signingInId === pwPrompt?.id || !pwValue}>
+                {signingInId === pwPrompt?.id ? "Signing in…" : "Sign in"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
