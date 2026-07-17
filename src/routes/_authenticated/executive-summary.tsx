@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { projectsQuery, updatesQuery, profilesQuery } from "@/lib/ci-queries";
 import { SITES, formatDate, isOverdue, statusRank, supportStatusRank, priorityClasses, type Status, type SupportStatus, type Category, type Priority, type EntryType } from "@/lib/ci";
 import { StatusBadge, SupportStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -44,34 +45,23 @@ function statusAccent(s: Status | SupportStatus): string {
 }
 
 function ExecutiveSummaryPage() {
-  const [projects, setProjects] = useState<P[]>([]);
-  const [updates, setUpdates] = useState<U[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const projectsQ = useQuery(projectsQuery());
+  const updatesQ = useQuery(updatesQuery());
+  const profilesQ = useQuery(profilesQuery());
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-        supabase
-          .from("projects")
-          .select("id, name, site, status, support_status, entry_type, featured, due_date, category, priority, next_action, requester, owner_id")
-          .eq("featured", true),
-        supabase
-          .from("weekly_updates")
-          .select("project_id, status, support_status, note, created_at")
-          .order("created_at", { ascending: false }),
-        supabase.from("profiles").select("id, full_name"),
-      ]);
-      setProjects((p ?? []) as unknown as P[]);
-      setUpdates((u ?? []) as unknown as U[]);
-      const map: Record<string, string> = {};
-      for (const row of (pr ?? []) as Array<{ id: string; full_name: string | null }>) {
-        map[row.id] = row.full_name ?? "—";
-      }
-      setProfiles(map);
-      setLoading(false);
-    })();
-  }, []);
+  // Only featured — filter client-side from the shared cache.
+  const projects = useMemo(
+    () => ((projectsQ.data ?? []) as unknown as P[]).filter((p) => p.featured),
+    [projectsQ.data],
+  );
+  const updates = (updatesQ.data ?? []) as unknown as U[];
+  const profiles = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const row of profilesQ.data ?? []) map[row.id] = row.full_name ?? "—";
+    return map;
+  }, [profilesQ.data]);
+  const loading = projectsQ.isLoading || updatesQ.isLoading;
+
 
   const latest = useMemo(() => {
     const m = new Map<string, U>();

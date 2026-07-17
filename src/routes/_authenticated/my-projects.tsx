@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { projectsQuery, updatesQuery, profilesQuery, useInvalidateCi } from "@/lib/ci-queries";
 import {
   SITES, STATUSES, PRIORITIES, CATEGORIES, SUPPORT_STATUSES,
   currentWeekLabel, formatDate, statusRank, supportStatusRank,
@@ -27,64 +29,44 @@ export const Route = createFileRoute("/_authenticated/my-projects")({
   component: MyProjectsPage,
 });
 
-const PROJECT_SELECT = "id, name, site, owner_id, status, description, blocker, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason";
-const UPDATE_SELECT = "id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id";
-
 function MyProjectsPage() {
   const { user, profile } = useAuth();
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [updates, setUpdates] = useState<UpdateRow[]>([]);
-  const [nameMap, setNameMap] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const invalidate = useInvalidateCi();
+
+  const projectsQ = useQuery({ ...projectsQuery(), enabled: !!user });
+  const updatesQ = useQuery({ ...updatesQuery(), enabled: !!user });
+  const profilesQ = useQuery(profilesQuery());
+
+  const projects = useMemo(
+    () => ((projectsQ.data ?? []) as ProjectRow[]).filter((p) => p.owner_id === user?.id),
+    [projectsQ.data, user?.id],
+  );
+  const nameMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const p of profilesQ.data ?? []) m[p.id] = p.full_name;
+    return m;
+  }, [profilesQ.data]);
+
+  const loading = projectsQ.isLoading || updatesQ.isLoading;
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [typeFilter, setTypeFilter] = useState<"all" | EntryType>("all");
   const [logUpdateFor, setLogUpdateFor] = useState<ProjectRow | null>(null);
 
   const currentWeek = currentWeekLabel();
-
-  const load = async () => {
-    if (!user) return;
-    setLoading(true);
-    const { data: p } = await supabase
-      .from("projects")
-      .select(PROJECT_SELECT)
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false });
-    const proj = (p ?? []) as unknown as ProjectRow[];
-    setProjects(proj);
-    const projectIds = proj.map((x) => x.id);
-    if (projectIds.length) {
-      const { data: u } = await supabase
-        .from("weekly_updates")
-        .select(UPDATE_SELECT)
-        .in("project_id", projectIds)
-        .order("created_at", { ascending: false });
-      const ups = (u ?? []) as unknown as (UpdateRow & { project_id: string })[];
-      setUpdates(ups);
-      const authorIds = Array.from(new Set(ups.map((x) => x.author_id)));
-      if (authorIds.length) {
-        const { data: profs } = await supabase.from("profiles").select("id, full_name").in("id", authorIds);
-        const m: Record<string, string> = {};
-        (profs ?? []).forEach((pr: { id: string; full_name: string }) => (m[pr.id] = pr.full_name));
-        setNameMap(m);
-      }
-    } else {
-      setUpdates([]);
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
+  const load = invalidate;
 
   const updatesByProject = useMemo(() => {
     const m = new Map<string, UpdateRow[]>();
-    for (const u of updates) {
-      const arr = m.get((u as UpdateRow & { project_id: string }).project_id) ?? [];
-      arr.push({ ...u, author_name: nameMap[u.author_id] });
-      m.set((u as UpdateRow & { project_id: string }).project_id, arr);
+    const myIds = new Set(projects.map((p) => p.id));
+    for (const raw of (updatesQ.data ?? []) as (UpdateRow & { project_id: string })[]) {
+      if (!myIds.has(raw.project_id)) continue;
+      const arr = m.get(raw.project_id) ?? [];
+      arr.push({ ...raw, author_name: nameMap[raw.author_id] });
+      m.set(raw.project_id, arr);
     }
     return m;
-  }, [updates, nameMap]);
+  }, [updatesQ.data, projects, nameMap]);
+
 
   const filtered = useMemo(() => {
     const base = typeFilter === "all"

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+import { projectsQuery, updatesQuery } from "@/lib/ci-queries";
 import { SITES, STATUSES, monthLabel, currentWeekLabel, type Status, type SupportStatus, type EntryType } from "@/lib/ci";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -37,22 +39,13 @@ function priorMonthLabel(): string {
 }
 
 function SummaryPage() {
-  const [projects, setProjects] = useState<Proj[]>([]);
-  const [updates, setUpdates] = useState<Row[]>([]);
+  const projectsQ = useQuery(projectsQuery());
+  const updatesQ = useQuery(updatesQuery());
+  const projects = (projectsQ.data ?? []) as unknown as Proj[];
+  const updates = (updatesQ.data ?? []) as unknown as Row[];
+  const loading = projectsQ.isLoading || updatesQ.isLoading;
   const [mode, setMode] = useState<"weekly" | "monthly">("weekly");
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const [{ data: p }, { data: u }] = await Promise.all([
-        supabase.from("projects").select("id, name, site, status, support_status, entry_type, created_at, archived, pending_approval"),
-        supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, created_at").order("created_at", { ascending: false }),
-      ]);
-      setProjects((p ?? []) as unknown as Proj[]);
-      setUpdates((u ?? []) as unknown as Row[]);
-      setLoading(false);
-    })();
-  }, []);
 
   const currentBucket = mode === "weekly" ? currentWeekLabel() : monthLabel(new Date());
   const priorBucket = mode === "weekly" ? priorWeekLabel() : priorMonthLabel();

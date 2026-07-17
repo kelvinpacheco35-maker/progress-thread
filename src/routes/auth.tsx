@@ -41,17 +41,35 @@ function AuthPage() {
       }
       const session = await res.json();
 
-      // Write the session directly to localStorage in the shape supabase-js
-      // expects. This avoids calling supabase.auth.setSession(), which
-      // internally hits /auth/v1/user — a request the Lovable preview
-      // fetch-proxy blocks, surfacing as "Failed to fetch".
-      const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
-      const storageKey = `sb-${projectRef}-auth-token`;
-      window.localStorage.setItem(storageKey, JSON.stringify(session));
+      // The Lovable editor preview proxy blocks /auth/v1/user, which
+      // supabase.auth.setSession() calls internally. On preview we write
+      // the session directly to localStorage; supabase-js will pick it up
+      // and auto-refresh on next initialization.
+      //
+      // On the published domain there is no proxy — use setSession() so the
+      // client registers its refresh timer immediately and the access token
+      // keeps refreshing throughout the session (~1h token lifetime).
+      const isPreview = typeof window !== "undefined"
+        && /(^|\.)lovable\.app$/i.test(window.location.hostname)
+        && window.location.hostname.includes("id-preview");
 
-      // Hard reload so AuthProvider reads the new session from storage and
-      // the router remounts with the authenticated context.
-      window.location.replace("/my-projects");
+      if (isPreview) {
+        const projectRef = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
+        const storageKey = `sb-${projectRef}-auth-token`;
+        window.localStorage.setItem(storageKey, JSON.stringify(session));
+        window.location.replace("/my-projects");
+      } else {
+        const { supabase } = await import("@/integrations/supabase/client");
+        const { error } = await supabase.auth.setSession({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        });
+        if (error) {
+          toast.error(`Sign-in failed: ${error.message}`);
+          return;
+        }
+        window.location.replace("/my-projects");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
