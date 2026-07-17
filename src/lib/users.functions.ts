@@ -34,17 +34,14 @@ export type AuditEntry = {
 export const listPickerUsers = createServerFn({ method: "GET" }).handler(
   async (): Promise<PickerUser[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }, { data: creds, error: cErr }] =
+    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at"),
+        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, has_password"),
         supabaseAdmin.from("user_roles").select("user_id, role"),
-        supabaseAdmin.from("user_credentials").select("user_id"),
       ]);
     if (pErr) throw new Error(pErr.message);
     if (rErr) throw new Error(rErr.message);
-    if (cErr) throw new Error(cErr.message);
     const adminSet = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
-    const credSet = new Set((creds ?? []).map((c) => c.user_id as string));
     return (profiles ?? [])
       .filter((p) => !(p as { deactivated_at: string | null }).deactivated_at)
       .map((p) => ({
@@ -52,7 +49,7 @@ export const listPickerUsers = createServerFn({ method: "GET" }).handler(
         full_name: (p.full_name as string) ?? "",
         site: p.site as Site,
         is_admin: adminSet.has(p.id as string),
-        password_required: credSet.has(p.id as string),
+        password_required: !!(p as { has_password: boolean }).has_password,
       }))
       .sort((a, b) => a.site.localeCompare(b.site) || a.full_name.localeCompare(b.full_name));
   },
