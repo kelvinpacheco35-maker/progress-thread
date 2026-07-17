@@ -52,6 +52,7 @@ export type Database = {
           created_at: string
           deactivated_at: string | null
           full_name: string
+          has_password: boolean
           id: string
           site: Database["public"]["Enums"]["site_code"]
         }
@@ -59,6 +60,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name: string
+          has_password?: boolean
           id: string
           site: Database["public"]["Enums"]["site_code"]
         }
@@ -66,6 +68,7 @@ export type Database = {
           created_at?: string
           deactivated_at?: string | null
           full_name?: string
+          has_password?: boolean
           id?: string
           site?: Database["public"]["Enums"]["site_code"]
         }
@@ -161,27 +164,6 @@ export type Database = {
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
           support_status?: Database["public"]["Enums"]["support_status"] | null
-        }
-        Relationships: []
-      }
-      user_credentials: {
-        Row: {
-          password_hash: string
-          salt: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          password_hash: string
-          salt: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          password_hash?: string
-          salt?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

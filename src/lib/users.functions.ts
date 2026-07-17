@@ -34,17 +34,14 @@ export type AuditEntry = {
 export const listPickerUsers = createServerFn({ method: "GET" }).handler(
   async (): Promise<PickerUser[]> => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }, { data: creds, error: cErr }] =
+    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at"),
+        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, has_password"),
         supabaseAdmin.from("user_roles").select("user_id, role"),
-        supabaseAdmin.from("user_credentials").select("user_id"),
       ]);
     if (pErr) throw new Error(pErr.message);
     if (rErr) throw new Error(rErr.message);
-    if (cErr) throw new Error(cErr.message);
     const adminSet = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
-    const credSet = new Set((creds ?? []).map((c) => c.user_id as string));
     return (profiles ?? [])
       .filter((p) => !(p as { deactivated_at: string | null }).deactivated_at)
       .map((p) => ({
@@ -52,7 +49,7 @@ export const listPickerUsers = createServerFn({ method: "GET" }).handler(
         full_name: (p.full_name as string) ?? "",
         site: p.site as Site,
         is_admin: adminSet.has(p.id as string),
-        password_required: credSet.has(p.id as string),
+        password_required: !!(p as { has_password: boolean }).has_password,
       }))
       .sort((a, b) => a.site.localeCompare(b.site) || a.full_name.localeCompare(b.full_name));
   },
@@ -109,17 +106,14 @@ export const adminListUsers = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<AdminUser[]> => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }, { data: creds, error: cErr }] =
+    const [{ data: profiles, error: pErr }, { data: roles, error: rErr }] =
       await Promise.all([
-        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, created_at"),
+        supabaseAdmin.from("profiles").select("id, full_name, site, deactivated_at, created_at, has_password"),
         supabaseAdmin.from("user_roles").select("user_id, role"),
-        supabaseAdmin.from("user_credentials").select("user_id"),
       ]);
     if (pErr) throw new Error(pErr.message);
     if (rErr) throw new Error(rErr.message);
-    if (cErr) throw new Error(cErr.message);
     const adminSet = new Set((roles ?? []).filter((r) => r.role === "admin").map((r) => r.user_id));
-    const credSet = new Set((creds ?? []).map((c) => c.user_id as string));
     return (profiles ?? [])
       .map((p: any) => ({
         id: p.id as string,
@@ -127,7 +121,7 @@ export const adminListUsers = createServerFn({ method: "GET" })
         site: p.site as Site,
         is_admin: adminSet.has(p.id as string),
         deactivated: !!p.deactivated_at,
-        has_password: credSet.has(p.id as string),
+        has_password: !!p.has_password,
         created_at: p.created_at as string,
       }))
       .sort(
@@ -303,24 +297,23 @@ export const adminSetPassword = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { hashPassword } = await import("@/lib/password.server");
 
-    let action: string;
-    if (data.password === null) {
-      const { error } = await supabaseAdmin.from("user_credentials").delete().eq("user_id", data.id);
-      if (error) throw new Error(error.message);
-      action = "password_removed";
-    } else {
-      const { salt, hash } = hashPassword(data.password);
-      const { error } = await supabaseAdmin
-        .from("user_credentials")
-        .upsert(
-          { user_id: data.id, password_hash: hash, salt, updated_at: new Date().toISOString() },
-          { onConflict: "user_id" },
-        );
-      if (error) throw new Error(error.message);
-      action = "password_set";
-    }
+    // Passwords are managed by Supabase Auth (bcrypt). Removing a password
+    // means rotating to a fresh random value so one-click sign-in works again.
+    const newPassword =
+      data.password === null ? crypto.randomUUID() + crypto.randomUUID() : data.password;
+    const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(data.id, {
+      password: newPassword,
+    });
+    if (updErr) throw new Error(updErr.message);
+
+    const { error: flagErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ has_password: data.password !== null })
+      .eq("id", data.id);
+    if (flagErr) throw new Error(flagErr.message);
+
+    const action = data.password === null ? "password_removed" : "password_set";
 
     const { data: prof } = await supabaseAdmin
       .from("profiles")

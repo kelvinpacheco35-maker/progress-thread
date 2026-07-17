@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
-// PUBLIC endpoint: sign in as a listed user. If a password/PIN has been set
-// for the target user by an admin, it must be supplied and is verified
-// server-side before a session is minted. Deactivated users cannot sign in.
+// PUBLIC endpoint: sign in as a listed user. If a password has been set for
+// the target user (profiles.has_password = true), verify it via Supabase
+// Auth's signInWithPassword. Otherwise rotate the password to a random value
+// and sign in — preserving the one-click experience.
 export const Route = createFileRoute("/api/public/session-for-user")({
   server: {
     handlers: {
@@ -21,10 +22,10 @@ export const Route = createFileRoute("/api/public/session-for-user")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Enforce active profile
+        // Load profile: active check + password-required flag.
         const { data: profile, error: pErr } = await supabaseAdmin
           .from("profiles")
-          .select("id, deactivated_at")
+          .select("id, deactivated_at, has_password")
           .eq("id", userId)
           .maybeSingle();
         if (pErr) return new Response(pErr.message, { status: 500 });
@@ -33,30 +34,12 @@ export const Route = createFileRoute("/api/public/session-for-user")({
           return new Response("Account is deactivated", { status: 403 });
         }
 
-        // Enforce password if set
-        const { data: cred, error: cErr } = await supabaseAdmin
-          .from("user_credentials")
-          .select("password_hash, salt")
-          .eq("user_id", userId)
-          .maybeSingle();
-        if (cErr) return new Response(cErr.message, { status: 500 });
-
-        if (cred) {
-          if (typeof body.password !== "string" || body.password.length === 0) {
-            return new Response("Password required", { status: 401 });
-          }
-          const { verifyPassword } = await import("@/lib/password.server");
-          const ok = verifyPassword(body.password, (cred as any).salt, (cred as any).password_hash);
-          if (!ok) return new Response("Incorrect password", { status: 401 });
+        // Need the user's email either way.
+        const { data: userRes, error: uErr } = await supabaseAdmin.auth.admin.getUserById(userId);
+        if (uErr || !userRes.user?.email) {
+          return new Response(uErr?.message ?? "User not found", { status: uErr ? 500 : 404 });
         }
-
-        // Rotate the password AND fetch the user in one admin call.
-        const password = crypto.randomUUID() + crypto.randomUUID();
-        const { data: updated, error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
-        if (updErr || !updated.user?.email) {
-          return new Response(updErr?.message ?? "User not found", { status: updErr ? 500 : 404 });
-        }
-        const email = updated.user.email;
+        const email = userRes.user.email;
 
         const supabaseUrl = process.env.SUPABASE_URL!;
         const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY!;
@@ -74,12 +57,28 @@ export const Route = createFileRoute("/api/public/session-for-user")({
           },
         });
 
+        const hasPassword = !!(profile as { has_password: boolean }).has_password;
+        let password: string;
+
+        if (hasPassword) {
+          if (typeof body.password !== "string" || body.password.length === 0) {
+            return new Response("Password required", { status: 401 });
+          }
+          password = body.password;
+        } else {
+          // Rotate to a fresh random password and sign in with it.
+          password = crypto.randomUUID() + crypto.randomUUID();
+          const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+          if (updErr) return new Response(updErr.message, { status: 500 });
+        }
+
         const { data: signIn, error: signErr } = await supabaseAnon.auth.signInWithPassword({
           email,
           password,
         });
         if (signErr || !signIn.session) {
-          return new Response(signErr?.message ?? "Sign-in failed", { status: 500 });
+          const msg = hasPassword ? "Incorrect password" : (signErr?.message ?? "Sign-in failed");
+          return new Response(msg, { status: hasPassword ? 401 : 500 });
         }
 
         return Response.json({
