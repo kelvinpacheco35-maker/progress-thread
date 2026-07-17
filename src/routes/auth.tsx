@@ -22,6 +22,9 @@ function AuthPage() {
   const { user } = useAuth();
   const fetchUsers = useServerFn(listPickerUsers);
   const [signingInId, setSigningInId] = useState<string | null>(null);
+  const [pwPrompt, setPwPrompt] = useState<PickerUser | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["picker-users"],
@@ -32,28 +35,26 @@ function AuthPage() {
     if (user) navigate({ to: "/my-projects", replace: true });
   }, [user, navigate]);
 
-  const signInAs = async (u: PickerUser) => {
+  const doSignIn = async (u: PickerUser, password?: string) => {
     setSigningInId(u.id);
+    setPwError(null);
     try {
       const res = await fetch("/api/public/session-for-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: u.id }),
+        body: JSON.stringify({ user_id: u.id, ...(password ? { password } : {}) }),
       });
       if (!res.ok) {
-        toast.error(`Sign-in failed: ${await res.text()}`);
+        const msg = await res.text();
+        if (res.status === 401) {
+          setPwError(msg || "Incorrect password");
+          return;
+        }
+        toast.error(`Sign-in failed: ${msg}`);
         return;
       }
       const session = await res.json();
 
-      // The Lovable editor preview proxy blocks /auth/v1/user, which
-      // supabase.auth.setSession() calls internally. On preview we write
-      // the session directly to localStorage; supabase-js will pick it up
-      // and auto-refresh on next initialization.
-      //
-      // On the published domain there is no proxy — use setSession() so the
-      // client registers its refresh timer immediately and the access token
-      // keeps refreshing throughout the session (~1h token lifetime).
       const isPreview = typeof window !== "undefined"
         && /(^|\.)lovable\.app$/i.test(window.location.hostname)
         && window.location.hostname.includes("id-preview");
@@ -79,6 +80,17 @@ function AuthPage() {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
       setSigningInId(null);
+    }
+  };
+
+  const onTileClick = (u: PickerUser) => {
+    if (signingInId) return;
+    if (u.password_required) {
+      setPwPrompt(u);
+      setPwValue("");
+      setPwError(null);
+    } else {
+      doSignIn(u);
     }
   };
 
