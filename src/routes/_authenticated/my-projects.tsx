@@ -126,7 +126,24 @@ function MyProjectsPage() {
       </Tabs>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="grid gap-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Card key={i} className="border-l-4 border-l-muted">
+              <CardContent className="py-4 flex items-center gap-4">
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="h-5 w-16 rounded bg-muted animate-pulse" />
+                    <div className="h-5 w-64 rounded bg-muted animate-pulse" />
+                    <div className="h-5 w-20 rounded-full bg-muted animate-pulse" />
+                  </div>
+                  <div className="h-3 w-72 rounded bg-muted animate-pulse" />
+                  <div className="h-3 w-96 max-w-full rounded bg-muted animate-pulse" />
+                </div>
+                <div className="h-8 w-28 rounded bg-muted animate-pulse shrink-0" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -147,7 +164,8 @@ function MyProjectsPage() {
               <Card
                 key={p.id}
                 className={cn(
-                  "cursor-pointer hover:border-primary/60 transition-colors",
+                  "cursor-pointer hover:border-primary/60 transition-colors border-l-4",
+                  statusAccent(shownStatus as Status | SupportStatus),
                   isSupport && "bg-muted/20",
                 )}
                 onClick={() => openHistory(p)}
