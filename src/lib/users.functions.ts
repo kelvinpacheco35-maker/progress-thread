@@ -150,7 +150,14 @@ export const adminListAudit = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (data ?? []) as AuditEntry[];
+    return (data ?? []).map((r: any) => ({
+      id: r.id as string,
+      actor_name: r.actor_name as string,
+      action: r.action as string,
+      target_name: (r.target_name as string) ?? null,
+      details: r.details ? JSON.stringify(r.details) : null,
+      created_at: r.created_at as string,
+    }));
   });
 
 // ---------- Admin: create user ----------
