@@ -245,6 +245,58 @@ function AllProjectsPage() {
     load();
   };
 
+  const exportAllData = async () => {
+    try {
+      toast.info("Preparing export…");
+      const [{ data: allProjects, error: pErr }, { data: allUpdates, error: uErr }, { data: allProfiles, error: prErr }] = await Promise.all([
+        supabase.from("projects").select("*"),
+        supabase.from("weekly_updates").select("*"),
+        supabase.from("profiles").select("id, full_name, site"),
+      ]);
+      if (pErr) throw pErr;
+      if (uErr) throw uErr;
+      if (prErr) throw prErr;
+      const nameById = new Map((allProfiles ?? []).map((p) => [p.id, p.full_name] as const));
+
+      const toCsv = (rows: Record<string, unknown>[]) => {
+        if (!rows.length) return "";
+        const cols = Object.keys(rows[0]);
+        const esc = (v: unknown) => {
+          if (v === null || v === undefined) return "";
+          const s = typeof v === "object" ? JSON.stringify(v) : String(v);
+          return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+        };
+        return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
+      };
+
+      const projectRows = (allProjects ?? []).map((p) => ({
+        ...p,
+        owner_name: nameById.get(p.owner_id) ?? "(Unassigned)",
+      }));
+      const updateRows = (allUpdates ?? []).map((u) => ({
+        ...u,
+        author_name: nameById.get(u.author_id) ?? "(Unassigned)",
+      }));
+
+      const download = (name: string, content: string) => {
+        const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      const stamp = new Date().toISOString().slice(0, 10);
+      download(`ci-projects-${stamp}.csv`, toCsv(projectRows));
+      download(`ci-updates-${stamp}.csv`, toCsv(updateRows));
+      toast.success(`Exported ${projectRows.length} projects and ${updateRows.length} updates`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    }
+  };
+
 
   if (authLoading) return <div className="p-6 text-sm text-muted-foreground">Loading…</div>;
   if (!isAdmin) return null;
