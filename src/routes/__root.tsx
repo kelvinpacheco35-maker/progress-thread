@@ -53,7 +53,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "CI Status Tracker" },
       { name: "description", content: "Track Continuous Improvement project status across SunOpta manufacturing sites." },
-      { name: "robots", content: "noindex, nofollow" },
+      
       { property: "og:title", content: "CI Status Tracker" },
       { property: "og:description", content: "Track Continuous Improvement project status across SunOpta manufacturing sites." },
       { property: "og:type", content: "website" },
