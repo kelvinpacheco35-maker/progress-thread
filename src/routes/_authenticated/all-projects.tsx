@@ -251,9 +251,14 @@ function AllProjectsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">All Projects</h1>
-        <p className="text-sm text-muted-foreground mt-1">Every CI project across every site.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">All Projects</h1>
+          <p className="text-sm text-muted-foreground mt-1">Every CI project across every site.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={exportAllData}>
+          <Download className="w-4 h-4 mr-1.5" /> Export all data
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-3 items-end">
