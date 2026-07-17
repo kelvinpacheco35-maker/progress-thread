@@ -29,6 +29,20 @@ export const Route = createFileRoute("/_authenticated/my-projects")({
   component: MyProjectsPage,
 });
 
+function statusAccent(s: Status | SupportStatus): string {
+  switch (s) {
+    case "On Track": return "border-l-[var(--status-ontrack)]";
+    case "At Risk": return "border-l-[var(--status-atrisk)]";
+    case "Blocked": return "border-l-[var(--status-blocked)]";
+    case "Complete": return "border-l-[var(--status-complete)]";
+    case "On Hold": return "border-l-[var(--status-hold)]";
+    case "Open": return "border-l-[var(--support-open)]";
+    case "In Progress": return "border-l-[var(--support-inprogress)]";
+    case "Done": return "border-l-[var(--support-done)]";
+    default: return "border-l-border";
+  }
+}
+
 function MyProjectsPage() {
   const { user, profile } = useAuth();
   const invalidate = useInvalidateCi();
