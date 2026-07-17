@@ -47,6 +47,30 @@ export type Database = {
         }
         Relationships: []
       }
+      auth_lockouts: {
+        Row: {
+          failed_attempts: number
+          last_failed_at: string | null
+          locked_until: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          failed_attempts?: number
+          last_failed_at?: string | null
+          locked_until?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          failed_attempts?: number
+          last_failed_at?: string | null
+          locked_until?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
