@@ -409,7 +409,34 @@ function AllProjectsPage() {
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="rounded-md border border-border bg-card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60 text-muted-foreground">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium">Project</th>
+                <th className="text-left px-3 py-2 font-medium">Site</th>
+                <th className="text-left px-3 py-2 font-medium">Owner</th>
+                <th className="text-left px-3 py-2 font-medium">Status</th>
+                <th className="text-left px-3 py-2 font-medium">Due</th>
+                <th className="text-left px-3 py-2 font-medium">Updated</th>
+                <th className="text-right px-3 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i} className="border-t border-border">
+                  <td className="px-3 py-3"><div className="h-4 w-56 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-4 w-28 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-5 w-20 rounded-full bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3"><div className="h-4 w-20 rounded bg-muted animate-pulse" /></td>
+                  <td className="px-3 py-3 text-right"><div className="inline-block h-6 w-32 rounded bg-muted animate-pulse" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <div className="rounded-md border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
@@ -417,13 +444,9 @@ function AllProjectsPage() {
               <tr>
                 <th className="text-left px-3 py-2 font-medium">Project</th>
                 <th className="text-left px-3 py-2 font-medium">Site</th>
-                <th className="text-left px-3 py-2 font-medium">Category</th>
                 <th className="text-left px-3 py-2 font-medium">Owner</th>
                 <th className="text-left px-3 py-2 font-medium">Status</th>
-                <th className="text-left px-3 py-2 font-medium">Priority</th>
                 <th className="text-left px-3 py-2 font-medium">Due</th>
-                <th className="text-left px-3 py-2 font-medium">Progress</th>
-                <th className="text-left px-3 py-2 font-medium">Next action</th>
                 <th className="text-left px-3 py-2 font-medium">Updated</th>
                 <th className="text-right px-3 py-2 font-medium">Actions</th>
               </tr>
@@ -439,9 +462,6 @@ function AllProjectsPage() {
                       <button onClick={() => setOpenProject(r)} className="text-left font-medium text-primary hover:underline">
                         {r.name}
                       </button>
-                      {r.priority === "High" && (
-                        <span className={cn("text-[10px] font-semibold uppercase tracking-wide rounded px-1.5 py-0.5 border", priorityClasses("High"))}>High</span>
-                      )}
                       {r.needsUpdate && (
                         <span
                           title={r.staleDays === null ? "No weekly update yet" : `Last update ${r.staleDays} days ago`}
@@ -454,37 +474,25 @@ function AllProjectsPage() {
                         <span className="text-[10px] rounded px-1.5 py-0.5 bg-muted text-muted-foreground border">Archived</span>
                       )}
                     </div>
-                    {r.isSupport && r.requester && (
-                      <div className="text-xs text-muted-foreground mt-0.5 truncate max-w-[320px]">Requester: {r.requester}</div>
-                    )}
-                    {r.latestBlocker && !r.isSupport && (
-                      <div className="text-xs text-[var(--status-blocked)] mt-0.5 truncate max-w-[320px]" title={r.latestBlocker}>
-                        Blocker: {r.latestBlocker}
-                      </div>
-                    )}
                   </td>
                   <td className="px-3 py-2">{r.site}</td>
-                  <td className="px-3 py-2">
-                    {r.isSupport ? <span className="text-muted-foreground">—</span> : r.category ? (
-                      <span className="text-xs rounded-full px-2 py-0.5 border bg-primary/5 text-primary border-primary/20">{r.category}</span>
-                    ) : <span className="text-muted-foreground">—</span>}
-                  </td>
                   <td className="px-3 py-2">{r.owner_name ?? "—"}</td>
                   <td className="px-3 py-2">
-                    {r.pending_approval ? (
-                      <PendingApprovalBadge />
-                    ) : r.isSupport ? (
-                      <SupportStatusBadge status={r.supportStatus} />
-                    ) : (
-                      <StatusBadge status={r.projectStatus} />
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {r.priority && (
-                      <span className={cn("text-xs font-medium rounded-full px-2 py-0.5 border", priorityClasses(r.priority as Priority))}>
-                        {r.priority}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {r.priority === "High" && (
+                        <span
+                          title="High priority"
+                          className="inline-block w-2 h-2 rounded-full bg-[var(--status-blocked)]"
+                        />
+                      )}
+                      {r.pending_approval ? (
+                        <PendingApprovalBadge />
+                      ) : r.isSupport ? (
+                        <SupportStatusBadge status={r.supportStatus} />
+                      ) : (
+                        <StatusBadge status={r.projectStatus} />
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">
                     {r.due_date ? (
@@ -493,21 +501,6 @@ function AllProjectsPage() {
                         {overdue && <span className="ml-1 text-[10px] rounded px-1 py-0.5 border border-[var(--status-blocked)]/30 bg-[var(--status-blocked)]/10">Overdue</span>}
                       </span>
                     ) : <span className="text-muted-foreground">—</span>}
-                  </td>
-                  <td className="px-3 py-2 min-w-[110px]">
-                    {r.isSupport ? (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, r.completion_pct ?? 0))}%` }} />
-                        </div>
-                        <span className="text-xs tabular-nums text-muted-foreground">{r.completion_pct ?? 0}%</span>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 max-w-[220px] truncate" title={r.isSupport ? (r.description ?? "") : (r.next_action ?? "")}>
-                    {r.isSupport ? (r.description ?? <span className="text-muted-foreground">—</span>) : (r.next_action ?? <span className="text-muted-foreground">—</span>)}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.lastUpdated)}</td>
                   <td className="px-3 py-2 text-right">
@@ -558,7 +551,7 @@ function AllProjectsPage() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
+                <tr><td colSpan={7} className="px-3 py-8 text-center text-muted-foreground">No projects match those filters.</td></tr>
               )}
             </tbody>
           </table>
