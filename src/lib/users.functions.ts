@@ -25,7 +25,7 @@ export type AuditEntry = {
   actor_name: string;
   action: string;
   target_name: string | null;
-  details: Record<string, unknown> | null;
+  details: string | null;
   created_at: string;
 };
 
