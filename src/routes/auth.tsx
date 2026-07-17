@@ -5,6 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { listPickerUsers, type PickerUser } from "@/lib/users.functions";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
