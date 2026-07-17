@@ -23,15 +23,15 @@ export const Route = createFileRoute("/api/public/session-for-user")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        const { data: userInfo, error: getErr } = await supabaseAdmin.auth.admin.getUserById(userId);
-        if (getErr || !userInfo.user?.email) {
-          return new Response("User not found", { status: 404 });
-        }
-        const email = userInfo.user.email;
-
+        // Rotate the password AND fetch the user in one admin call — updateUserById
+        // returns the full user record (including email), so we can skip the separate
+        // getUserById round trip.
         const password = crypto.randomUUID() + crypto.randomUUID();
-        const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
-        if (updErr) return new Response(updErr.message, { status: 500 });
+        const { data: updated, error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+        if (updErr || !updated.user?.email) {
+          return new Response(updErr?.message ?? "User not found", { status: updErr ? 500 : 404 });
+        }
+        const email = updated.user.email;
 
         const supabaseUrl = process.env.SUPABASE_URL!;
         const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY!;
