@@ -1,16 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 
-// PUBLIC endpoint by design: this app uses a name-tile picker instead of passwords.
-// Anyone reaching the app can sign in as any listed user — this matches the
-// documented trust model ("internal tool used only by a known, small team").
-// The endpoint rotates the target user's password to a fresh random value
-// server-side, uses it to mint a session, and returns the session tokens.
+// PUBLIC endpoint: sign in as a listed user. If a password/PIN has been set
+// for the target user by an admin, it must be supplied and is verified
+// server-side before a session is minted. Deactivated users cannot sign in.
 export const Route = createFileRoute("/api/public/session-for-user")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        let body: { user_id?: string };
+        let body: { user_id?: string; password?: string };
         try {
           body = await request.json();
         } catch {
@@ -23,9 +21,36 @@ export const Route = createFileRoute("/api/public/session-for-user")({
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-        // Rotate the password AND fetch the user in one admin call — updateUserById
-        // returns the full user record (including email), so we can skip the separate
-        // getUserById round trip.
+        // Enforce active profile
+        const { data: profile, error: pErr } = await supabaseAdmin
+          .from("profiles")
+          .select("id, deactivated_at")
+          .eq("id", userId)
+          .maybeSingle();
+        if (pErr) return new Response(pErr.message, { status: 500 });
+        if (!profile) return new Response("User not found", { status: 404 });
+        if ((profile as { deactivated_at: string | null }).deactivated_at) {
+          return new Response("Account is deactivated", { status: 403 });
+        }
+
+        // Enforce password if set
+        const { data: cred, error: cErr } = await supabaseAdmin
+          .from("user_credentials")
+          .select("password_hash, salt")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (cErr) return new Response(cErr.message, { status: 500 });
+
+        if (cred) {
+          if (typeof body.password !== "string" || body.password.length === 0) {
+            return new Response("Password required", { status: 401 });
+          }
+          const { verifyPassword } = await import("@/lib/password.server");
+          const ok = verifyPassword(body.password, (cred as any).salt, (cred as any).password_hash);
+          if (!ok) return new Response("Incorrect password", { status: 401 });
+        }
+
+        // Rotate the password AND fetch the user in one admin call.
         const password = crypto.randomUUID() + crypto.randomUUID();
         const { data: updated, error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
         if (updErr || !updated.user?.email) {

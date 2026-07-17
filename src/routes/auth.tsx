@@ -5,6 +5,11 @@ import { useQuery } from "@tanstack/react-query";
 import { listPickerUsers, type PickerUser } from "@/lib/users.functions";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -17,6 +22,9 @@ function AuthPage() {
   const { user } = useAuth();
   const fetchUsers = useServerFn(listPickerUsers);
   const [signingInId, setSigningInId] = useState<string | null>(null);
+  const [pwPrompt, setPwPrompt] = useState<PickerUser | null>(null);
+  const [pwValue, setPwValue] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
 
   const { data: users, isLoading, error } = useQuery({
     queryKey: ["picker-users"],
@@ -27,28 +35,26 @@ function AuthPage() {
     if (user) navigate({ to: "/my-projects", replace: true });
   }, [user, navigate]);
 
-  const signInAs = async (u: PickerUser) => {
+  const doSignIn = async (u: PickerUser, password?: string) => {
     setSigningInId(u.id);
+    setPwError(null);
     try {
       const res = await fetch("/api/public/session-for-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: u.id }),
+        body: JSON.stringify({ user_id: u.id, ...(password ? { password } : {}) }),
       });
       if (!res.ok) {
-        toast.error(`Sign-in failed: ${await res.text()}`);
+        const msg = await res.text();
+        if (res.status === 401) {
+          setPwError(msg || "Incorrect password");
+          return;
+        }
+        toast.error(`Sign-in failed: ${msg}`);
         return;
       }
       const session = await res.json();
 
-      // The Lovable editor preview proxy blocks /auth/v1/user, which
-      // supabase.auth.setSession() calls internally. On preview we write
-      // the session directly to localStorage; supabase-js will pick it up
-      // and auto-refresh on next initialization.
-      //
-      // On the published domain there is no proxy — use setSession() so the
-      // client registers its refresh timer immediately and the access token
-      // keeps refreshing throughout the session (~1h token lifetime).
       const isPreview = typeof window !== "undefined"
         && /(^|\.)lovable\.app$/i.test(window.location.hostname)
         && window.location.hostname.includes("id-preview");
@@ -74,6 +80,17 @@ function AuthPage() {
       toast.error(e instanceof Error ? e.message : "Sign-in failed");
     } finally {
       setSigningInId(null);
+    }
+  };
+
+  const onTileClick = (u: PickerUser) => {
+    if (signingInId) return;
+    if (u.password_required) {
+      setPwPrompt(u);
+      setPwValue("");
+      setPwError(null);
+    } else {
+      doSignIn(u);
     }
   };
 
@@ -126,22 +143,27 @@ function AuthPage() {
                       key={u.id}
                       className="cursor-pointer hover:border-primary transition-colors data-[busy=true]:opacity-60"
                       data-busy={busy}
-                      onClick={() => !signingInId && signInAs(u)}
+                      onClick={() => onTileClick(u)}
                     >
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center justify-between gap-2">
                           <span className="truncate">{u.full_name}</span>
-                          {u.is_admin && (
-                            <span className="text-[10px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 bg-primary/10 text-primary">
-                              Admin
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1">
+                            {u.password_required && (
+                              <Lock className="h-3 w-3 text-muted-foreground" aria-label="Password required" />
+                            )}
+                            {u.is_admin && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 bg-primary/10 text-primary">
+                                Admin
+                              </span>
+                            )}
+                          </span>
                         </CardTitle>
                         <CardDescription className="text-xs">{u.site}</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 pb-4">
                         <span className="text-xs text-primary">
-                          {busy ? "Signing in…" : "Continue as this user →"}
+                          {busy ? "Signing in…" : u.password_required ? "Enter password →" : "Continue as this user →"}
                         </span>
                       </CardContent>
                     </Card>
@@ -152,6 +174,42 @@ function AuthPage() {
           ))}
         </div>
       </div>
+
+      <Dialog open={!!pwPrompt} onOpenChange={(o) => !o && setPwPrompt(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Enter password for {pwPrompt?.full_name}</DialogTitle>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (pwPrompt) doSignIn(pwPrompt, pwValue);
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="pw">Password</Label>
+              <Input
+                id="pw"
+                type="password"
+                autoFocus
+                value={pwValue}
+                onChange={(e) => setPwValue(e.target.value)}
+                autoComplete="current-password"
+              />
+              {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setPwPrompt(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={signingInId === pwPrompt?.id || !pwValue}>
+                {signingInId === pwPrompt?.id ? "Signing in…" : "Sign in"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
