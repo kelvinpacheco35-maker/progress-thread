@@ -272,6 +272,15 @@ export const adminSetDeactivated = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
 
+    // When deactivating, revoke existing sessions so the change takes effect
+    // immediately — not only at next sign-in.
+    if (data.deactivated) {
+      const { error: signOutErr } = await supabaseAdmin.auth.admin.signOut(data.id, "global");
+      if (signOutErr) {
+        console.error("[adminSetDeactivated] signOut failed", signOutErr.message);
+      }
+    }
+
     await logAction(supabaseAdmin, {
       actor_id: context.userId,
       actor_name: await actorName(supabaseAdmin, context.userId),
@@ -288,8 +297,8 @@ export const adminSetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string; password: string | null }) => {
     if (!/^[0-9a-f-]{36}$/i.test(data.id)) throw new Error("Invalid id");
     if (data.password !== null) {
-      if (typeof data.password !== "string" || data.password.length < 4) {
-        throw new Error("Password must be at least 4 characters, or null to remove");
+      if (typeof data.password !== "string" || data.password.length < 8) {
+        throw new Error("Password must be at least 8 characters, or null to remove");
       }
     }
     return { id: data.id, password: data.password };
