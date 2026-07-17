@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { projectsQuery, updatesQuery, profilesQuery } from "@/lib/ci-queries";
 import { SITES, formatDate, isOverdue, statusRank, supportStatusRank, priorityClasses, type Status, type SupportStatus, type Category, type Priority, type EntryType } from "@/lib/ci";
