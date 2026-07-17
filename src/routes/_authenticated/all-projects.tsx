@@ -1,7 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
+import { projectsQuery, updatesQuery, profilesQuery, useInvalidateCi } from "@/lib/ci-queries";
 import { SITES, STATUSES, PRIORITIES, CATEGORIES, SUPPORT_STATUSES, formatDate, statusRank, supportStatusRank, priorityRank, priorityClasses, isOverdue, weeksBetween, daysSince, type Status, type SupportStatus, type Priority, type Category, type EntryType } from "@/lib/ci";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,9 +31,7 @@ type SortMode = "risk" | "updated" | "priority" | "due";
 
 function AllProjectsPage() {
   const { isAdmin, loading: authLoading } = useAuth();
-  const [projects, setProjects] = useState<ProjectRow[]>([]);
-  const [updates, setUpdates] = useState<(UpdateRow & { project_id: string })[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const invalidate = useInvalidateCi();
   const [siteFilter, setSiteFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -39,7 +39,6 @@ function AllProjectsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("active");
   const [search, setSearch] = useState("");
   const [sortMode, setSortMode] = useState<SortMode>("risk");
-  const [loading, setLoading] = useState(true);
   const [openProject, setOpenProject] = useState<ProjectRow | null>(null);
   const [editProject, setEditProject] = useState<ProjectRow | null>(null);
   const [deleteProject, setDeleteProject] = useState<ProjectRow | null>(null);
@@ -53,21 +52,19 @@ function AllProjectsPage() {
     }
   }, [authLoading, isAdmin]);
 
-  const load = async () => {
-    setLoading(true);
-    const [{ data: p }, { data: u }, { data: pr }] = await Promise.all([
-      supabase.from("projects").select("id, name, site, owner_id, status, description, blocker, featured, archived, created_at, due_date, priority, next_action, category, problem_statement, start_date, completion_pct, entry_type, support_status, requester, pending_approval, previous_status, previous_support_status, approved_at, approved_by, rejection_reason").order("created_at", { ascending: false }),
-      supabase.from("weekly_updates").select("id, project_id, week_label, status, support_status, note, blocker, reviewed, created_at, author_id").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id, full_name"),
-    ]);
-    setProjects((p ?? []) as unknown as ProjectRow[]);
-    setUpdates((u ?? []) as unknown as (UpdateRow & { project_id: string })[]);
+  const projectsQ = useQuery({ ...projectsQuery(), enabled: isAdmin });
+  const updatesQ = useQuery({ ...updatesQuery(), enabled: isAdmin });
+  const profilesQ = useQuery({ ...profilesQuery(), enabled: isAdmin });
+
+  const projects = (projectsQ.data ?? []) as unknown as ProjectRow[];
+  const updates = (updatesQ.data ?? []) as unknown as (UpdateRow & { project_id: string })[];
+  const profiles = useMemo(() => {
     const m: Record<string, string> = {};
-    (pr ?? []).forEach((x: { id: string; full_name: string }) => (m[x.id] = x.full_name));
-    setProfiles(m);
-    setLoading(false);
-  };
-  useEffect(() => { if (isAdmin) load(); }, [isAdmin]);
+    for (const p of profilesQ.data ?? []) m[p.id] = p.full_name;
+    return m;
+  }, [profilesQ.data]);
+  const loading = projectsQ.isLoading || updatesQ.isLoading;
+  const load = invalidate;
 
   const latestByProject = useMemo(() => {
     const m = new Map<string, UpdateRow & { project_id: string }>();
@@ -84,6 +81,7 @@ function AllProjectsPage() {
     }
     return m;
   }, [updates, profiles]);
+
 
   const rows = useMemo(() => {
     let out = projects.map((p) => {
