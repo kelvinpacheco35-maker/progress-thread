@@ -93,6 +93,7 @@ export function ProjectHistoryDialog({
             {project.site} · Owner {project.owner_name ?? "—"}
             {isSupport && project.requester ? <> · Requested by {project.requester}</> : null}
             {!isSupport && project.start_date ? <> · Started {formatDate(project.start_date)}</> : <> · Created {formatDate(project.created_at)}</>}
+            {!isSupport && <> · {weeksBetween(project.start_date ?? project.created_at)} weeks tracked</>}
             {project.due_date && (
               <> · Due <span className={cn(overdue && "text-[var(--status-blocked)] font-medium")}>
                 {formatDate(project.due_date)}{overdue && " (Overdue)"}
