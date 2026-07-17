@@ -143,22 +143,27 @@ function AuthPage() {
                       key={u.id}
                       className="cursor-pointer hover:border-primary transition-colors data-[busy=true]:opacity-60"
                       data-busy={busy}
-                      onClick={() => !signingInId && signInAs(u)}
+                      onClick={() => onTileClick(u)}
                     >
                       <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center justify-between gap-2">
                           <span className="truncate">{u.full_name}</span>
-                          {u.is_admin && (
-                            <span className="text-[10px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 bg-primary/10 text-primary">
-                              Admin
-                            </span>
-                          )}
+                          <span className="flex items-center gap-1">
+                            {u.password_required && (
+                              <Lock className="h-3 w-3 text-muted-foreground" aria-label="Password required" />
+                            )}
+                            {u.is_admin && (
+                              <span className="text-[10px] font-semibold uppercase tracking-wider rounded px-1.5 py-0.5 bg-primary/10 text-primary">
+                                Admin
+                              </span>
+                            )}
+                          </span>
                         </CardTitle>
                         <CardDescription className="text-xs">{u.site}</CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 pb-4">
                         <span className="text-xs text-primary">
-                          {busy ? "Signing in…" : "Continue as this user →"}
+                          {busy ? "Signing in…" : u.password_required ? "Enter password →" : "Continue as this user →"}
                         </span>
                       </CardContent>
                     </Card>
